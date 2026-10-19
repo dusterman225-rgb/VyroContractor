@@ -106,3 +106,15 @@ a.mini{text-decoration:none;display:inline-block}
 .pill.Lost{border-color:rgba(255,138,138,.5);color:#ff8a8a}
 .pill.New{border-color:var(--blue);color:var(--blue)}
 .late{color:#ff8a8a !important}
+
+.pill.Sent{border-color:var(--blue);color:var(--blue)}
+.pill.Approved{border-color:#7fe3b0;color:#7fe3b0}
+.pill.Rejected,.pill.Voided{border-color:rgba(255,138,138,.5);color:#ff8a8a}
+.line{padding:12px;border:1px solid var(--line);border-radius:12px;margin-top:10px;background:rgba(5,7,10,.4)}
+.line .r1{display:grid;grid-template-columns:110px 1fr;gap:8px}
+.line .r{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
+.line input,.line select{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:rgba(5,7,10,.7);color:#fff;font-size:.95rem;font-family:inherit;outline:none}
+.line small{display:block;color:var(--silver-dim);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.line .amt{text-align:right;color:#fff;font-weight:600;padding:10px 0}
+.totals .row b{font-variant-numeric:tabular-nums}
+.totals .big span,.totals .big b{font-size:1.05rem;color:#fff}
