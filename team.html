@@ -18,28 +18,22 @@
   <div class="card">
     <h2>Members</h2>
     <div id="members"></div>
+    <div class="note" id="status"></div>
   </div>
 
-  <div class="card" id="inviteCard" style="display:none">
-    <h2>Invite someone</h2>
-    <p>Create a one-time link and send it to them yourself (text or email). Anyone with the link can join, so only share it with the person you mean.</p>
-    <label class="field"><span>Role</span>
-      <select id="inviteRole">
+  <div class="card" id="addCard" style="display:none">
+    <h2>Add a team member</h2>
+    <p>We create their login and email them a link to choose their own password. Nobody, including you, ever sees it.</p>
+    <label class="field"><span>Name</span><input id="mname" type="text" maxlength="80" autocomplete="off"></label>
+    <label class="field"><span>Email</span><input id="memail" type="email" maxlength="120" autocomplete="off"></label>
+    <label class="field" id="roleField"><span>Role</span>
+      <select id="mrole">
         <option value="employee">Employee</option>
         <option value="supervisor">Supervisor</option>
       </select>
     </label>
-    <button class="btn" id="make" type="button">Create invite link</button>
-    <div id="newInvite" style="display:none">
-      <label class="field"><span>Send this link</span><input id="link" type="text" readonly></label>
-      <button class="btn ghost" id="copy" type="button">Copy link</button>
-    </div>
-    <div class="note" id="imsg"></div>
-  </div>
-
-  <div class="card" id="pendingCard" style="display:none">
-    <h2>Pending invites</h2>
-    <div id="pending"></div>
+    <button class="btn" id="add" type="button">Add and send login email</button>
+    <div class="note" id="amsg"></div>
   </div>
 
   <a class="back" href="app.html">Back to dashboard</a>
@@ -52,105 +46,84 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/auth.js"></script>
 <script>
-  var errBox = document.getElementById('err');
-  function fail(e) { errBox.textContent = vyro.friendly(e); }
-  function newCode() {
-    var a = new Uint8Array(16); crypto.getRandomValues(a);
-    return Array.from(a, function (x) { return x.toString(36).padStart(2, '0'); }).join('').slice(0, 24);
-  }
-  function linkFor(code) { return location.origin + '/join.html?code=' + code; }
-  async function copyText(t, input) {
-    try { await navigator.clipboard.writeText(t); return true; }
-    catch (e) { if (input) { input.focus(); input.select(); } return false; }
-  }
+  var $ = function (id) { return document.getElementById(id); };
 
   vyro.start(function (ctx) {
     var isOwner = ctx.role === 'owner';
+    var isManager = isOwner || ctx.role === 'supervisor';
+    function fail(e) { $('err').textContent = vyro.friendly(e); }
+    function status(t, cls) { $('status').textContent = t; $('status').className = 'note ' + (cls || ''); }
 
     async function loadMembers() {
-      var box = document.getElementById('members'); box.textContent = '';
+      var box = $('members'); box.textContent = '';
       var snap = await ctx.bizRef.collection('members').get();
       snap.forEach(function (d) {
         var m = d.data();
+        var isMe = d.id === ctx.user.uid;
         var row = vyro.el('div', 'item');
         var left = vyro.el('div', 'grow');
         left.appendChild(vyro.el('b', '', m.name || m.email));
-        left.appendChild(vyro.el('small', '', m.email + (d.id === ctx.user.uid ? ' (you)' : '')));
+        left.appendChild(vyro.el('small', '', m.email + (isMe ? ' (you)' : '') + ' \u00b7 ' + m.role));
         row.appendChild(left);
 
-        if (isOwner && d.id !== ctx.user.uid && m.role !== 'owner') {
-          var sel = vyro.el('select');
-          ['supervisor', 'employee'].forEach(function (r) {
-            var o = vyro.el('option', '', r); o.value = r; if (m.role === r) o.selected = true; sel.appendChild(o);
+        var canManage = !isMe && m.role !== 'owner' && (isOwner || (ctx.role === 'supervisor' && m.role === 'employee'));
+        if (canManage) {
+          if (isOwner) {
+            var sel = vyro.el('select');
+            ['supervisor', 'employee'].forEach(function (r) {
+              var o = vyro.el('option', '', r); o.value = r; if (m.role === r) o.selected = true; sel.appendChild(o);
+            });
+            sel.addEventListener('change', async function () {
+              try { await d.ref.update({ role: sel.value }); } catch (e) { fail(e); loadMembers(); }
+            });
+            row.appendChild(sel);
+          }
+          var rs = vyro.el('button', 'mini', 'Resend login'); rs.type = 'button';
+          rs.addEventListener('click', async function () {
+            try { await vyro.sendLoginEmail(m.email); status('Login email sent to ' + m.email + '.', 'ok'); }
+            catch (e) { status(vyro.friendly(e), 'err'); }
           });
-          sel.addEventListener('change', async function () {
-            try { await d.ref.update({ role: sel.value }); } catch (e) { fail(e); loadMembers(); }
-          });
-          row.appendChild(sel);
+          row.appendChild(rs);
           var rm = vyro.el('button', 'mini danger', 'Remove'); rm.type = 'button';
           rm.addEventListener('click', async function () {
             if (!confirm('Remove ' + (m.name || m.email) + ' from the team?')) return;
             try { await d.ref.delete(); loadMembers(); } catch (e) { fail(e); }
           });
           row.appendChild(rm);
-        } else {
-          row.appendChild(vyro.el('small', '', m.role));
         }
-        box.appendChild(row);
-      });
-    }
-
-    async function loadPending() {
-      var box = document.getElementById('pending'); box.textContent = '';
-      var snap = await vyro.db.collection('invites')
-        .where('bizId', '==', ctx.bizId).where('used', '==', false).get();
-      document.getElementById('pendingCard').style.display = snap.empty ? 'none' : 'block';
-      snap.forEach(function (d) {
-        var row = vyro.el('div', 'item');
-        var left = vyro.el('div', 'grow');
-        left.appendChild(vyro.el('b', '', d.data().role + ' invite'));
-        left.appendChild(vyro.el('small', '', 'Not used yet'));
-        row.appendChild(left);
-        var cp = vyro.el('button', 'mini', 'Copy link'); cp.type = 'button';
-        cp.addEventListener('click', async function () {
-          var ok = await copyText(linkFor(d.id));
-          cp.textContent = ok ? 'Copied' : 'Copy failed';
-        });
-        row.appendChild(cp);
-        var rv = vyro.el('button', 'mini danger', 'Revoke'); rv.type = 'button';
-        rv.addEventListener('click', async function () {
-          try { await d.ref.delete(); loadPending(); } catch (e) { fail(e); }
-        });
-        row.appendChild(rv);
         box.appendChild(row);
       });
     }
 
     loadMembers().catch(fail);
 
-    if (isOwner) {
-      document.getElementById('inviteCard').style.display = 'block';
-      loadPending().catch(fail);
+    if (isManager) {
+      $('addCard').style.display = 'block';
+      $('roleField').style.display = isOwner ? 'block' : 'none';
 
-      document.getElementById('make').addEventListener('click', async function () {
-        var btn = this; btn.disabled = true;
-        var code = newCode();
+      $('add').addEventListener('click', async function () {
+        var btn = this;
+        var name = $('mname').value.trim();
+        var email = $('memail').value.trim();
+        var role = isOwner ? $('mrole').value : 'employee';
+        var msg = $('amsg'); msg.className = 'note';
+        if (!name || !email) { msg.textContent = 'Enter a name and an email.'; msg.className = 'note err'; return; }
+        btn.disabled = true; msg.textContent = 'Creating login...';
         try {
-          await vyro.db.collection('invites').doc(code).set({
-            bizId: ctx.bizId, role: document.getElementById('inviteRole').value,
-            used: false, createdBy: ctx.user.uid, createdAt: vyro.stamp()
-          });
-          var link = document.getElementById('link');
-          link.value = linkFor(code);
-          document.getElementById('newInvite').style.display = 'block';
-          loadPending();
-        } catch (e) { fail(e); }
+          var r = await vyro.addMember(ctx.bizId, email, name, role);
+          msg.className = 'note ok';
+          msg.textContent = r.emailSent
+            ? 'Added. A login email was sent to ' + email + '. Ask them to check spam too.'
+            : 'Added, but the email could not be sent. Tap Resend login next to their name.';
+          $('mname').value = ''; $('memail').value = '';
+          await loadMembers();
+        } catch (err) {
+          msg.className = 'note err';
+          msg.textContent = (err && err.code === 'auth/email-already-in-use')
+            ? 'That email already has a Vyro login, so it cannot be added here yet. Use a different email for now.'
+            : vyro.friendly(err);
+        }
         btn.disabled = false;
-      });
-
-      document.getElementById('copy').addEventListener('click', async function () {
-        var ok = await copyText(document.getElementById('link').value, document.getElementById('link'));
-        this.textContent = ok ? 'Copied' : 'Press and hold the link to copy it';
       });
     }
   });
