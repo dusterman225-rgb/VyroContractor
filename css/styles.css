@@ -43,3 +43,15 @@ body{
   color:#fff;font-weight:700;letter-spacing:.12em;text-transform:uppercase;text-align:center;text-decoration:none;
   box-shadow:0 0 20px var(--blue-glow);
 }
+
+.brand{text-align:center}
+.mark{width:96px;height:96px;display:block;margin:0 auto 14px;filter:drop-shadow(0 0 18px var(--blue-glow))}
+.field{display:block;margin-top:14px}
+.field span{display:block;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--silver-dim);margin-bottom:6px}
+.field input{
+  width:100%;padding:14px;border-radius:12px;font-size:1rem;color:#fff;
+  background:rgba(5,7,10,.7);border:1px solid var(--line);outline:none;
+}
+.field input:focus{border-color:var(--blue);box-shadow:0 0 14px var(--blue-glow)}
+.note{margin-top:14px;font-size:.8rem;color:var(--silver-dim);text-align:center}
+button.btn{font:inherit;font-weight:700;cursor:pointer}
