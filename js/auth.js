@@ -16,7 +16,6 @@
       'auth/too-many-requests': 'Too many tries. Wait a few minutes and try again.',
       'auth/network-request-failed': 'No connection. Check your internet and try again.',
       'permission-denied': 'Permission denied. Check the Firestore rules were published, or you may not have access.',
-      'vyro/bad-invite': 'That invite link is invalid or has already been used. Ask your owner for a new one.',
       'vyro/no-business': 'No business found for this account. You may have been removed from the team.'
     };
     return map[err && err.code] || 'Something went wrong. Please try again.';
@@ -49,29 +48,47 @@
     } finally { busy = false; }
   }
 
-  async function joinTeam(email, password, name, code) {
-    busy = true;
+  function randomPassword() {
+    var a = new Uint8Array(24); crypto.getRandomValues(a);
+    return Array.from(a, function (x) { return x.toString(36).padStart(2, '0'); }).join('') + 'Aa1!';
+  }
+
+  // Firebase emails a link that lets the person choose their own password.
+  async function sendLoginEmail(email) {
     try {
-      code = (code || '').trim();
-      var cred = await auth.createUserWithEmailAndPassword(email, password);
+      await auth.sendPasswordResetEmail(email, { url: location.origin + '/login.html' });
+    } catch (e) {
+      await auth.sendPasswordResetEmail(email);
+    }
+  }
+
+  // Owner or supervisor adds a team member. The new login gets a random password nobody sees.
+  async function addMember(bizId, email, name, role) {
+    var app2 = firebase.initializeApp(window.VYRO_FIREBASE_CONFIG, 'second-' + Date.now());
+    var a2 = app2.auth();
+    var d2 = app2.firestore();
+    var uid = null;
+    try {
+      await a2.setPersistence(firebase.auth.Auth.Persistence.NONE);
+      var cred = await a2.createUserWithEmailAndPassword(email, randomPassword());
+      uid = cred.user.uid;
       try {
-        var invRef = db.collection('invites').doc(code);
-        var inv = await invRef.get();
-        if (!inv.exists || inv.data().used) { throw { code: 'vyro/bad-invite' }; }
-        var d = inv.data();
-        var uid = cred.user.uid;
-        var batch = db.batch();
-        batch.set(db.collection('businesses').doc(d.bizId).collection('members').doc(uid),
-          { role: d.role, email: email, name: name, inviteCode: code, createdAt: stamp() });
-        batch.set(db.collection('users').doc(uid), { email: email, bizId: d.bizId, createdAt: stamp() });
-        batch.update(invRef, { used: true, usedBy: uid });
-        await batch.commit();
+        await d2.collection('users').doc(uid).set({ email: email, bizId: bizId, createdAt: stamp() });
+        await db.collection('businesses').doc(bizId).collection('members').doc(uid).set({
+          role: role, email: email, name: name, addedBy: auth.currentUser.uid, createdAt: stamp()
+        });
       } catch (e) {
+        try { await d2.collection('users').doc(uid).delete(); } catch (_) {}
         try { await cred.user.delete(); } catch (_) {}
         throw e;
       }
-      return cred.user;
-    } finally { busy = false; }
+      var emailSent = true;
+      try { await sendLoginEmail(email); } catch (e) { emailSent = false; }
+      return { uid: uid, emailSent: emailSent };
+    } finally {
+      try { await a2.signOut(); } catch (_) {}
+      try { await app2.delete(); } catch (_) {}
+    }
   }
 
   function signIn(email, password) { return auth.signInWithEmailAndPassword(email, password); }
@@ -112,7 +129,8 @@
   }
 
   window.vyro = { auth: auth, db: db, stamp: stamp, friendly: friendly, el: el,
-    signUp: signUp, joinTeam: joinTeam, signIn: signIn, resetPassword: resetPassword,
-    signOut: signOut, requireAuth: requireAuth, redirectIfSignedIn: redirectIfSignedIn,
+    signUp: signUp, addMember: addMember, sendLoginEmail: sendLoginEmail,
+    signIn: signIn, resetPassword: resetPassword, signOut: signOut,
+    requireAuth: requireAuth, redirectIfSignedIn: redirectIfSignedIn,
     loadContext: loadContext, start: start };
 })();
