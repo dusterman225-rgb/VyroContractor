@@ -97,3 +97,12 @@ a.mini{text-decoration:none;display:inline-block}
 
 .item{flex-wrap:wrap}
 .item .grow{flex:1 1 160px}
+
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;margin-top:20px}
+.tab{flex:0 0 auto;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--silver-dim);font:inherit;font-size:.8rem;cursor:pointer;white-space:nowrap}
+.tab.on{border-color:var(--blue);color:#fff;background:rgba(75,156,211,.18);box-shadow:0 0 12px var(--blue-glow)}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--silver);margin-right:6px}
+.pill.Won{border-color:#7fe3b0;color:#7fe3b0}
+.pill.Lost{border-color:rgba(255,138,138,.5);color:#ff8a8a}
+.pill.New{border-color:var(--blue);color:var(--blue)}
+.late{color:#ff8a8a !important}
