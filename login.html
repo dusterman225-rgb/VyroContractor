@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#05070A">
+<title>Sign in - Vyro Business</title>
+<link rel="icon" href="images/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <a href="index.html"><img class="mark" src="images/logo.svg" alt="Vyro home"></a>
+    <div class="tag">Sign in to your business</div>
+  </div>
+
+  <form class="card" onsubmit="event.preventDefault();document.getElementById('msg').textContent='Design preview only. Real sign-in connects in Stage 2.';">
+    <h2>Welcome back</h2>
+    <label class="field"><span>Email</span><input type="email" placeholder="you@company.com" autocomplete="email"></label>
+    <label class="field"><span>Password</span><input type="password" placeholder="Password" autocomplete="current-password"></label>
+    <button class="btn" type="submit">Sign in</button>
+    <div class="note" id="msg">New here? Create account comes next.</div>
+  </form>
+</div>
+</body>
+  </html>
