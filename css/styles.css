@@ -55,3 +55,7 @@ body{
 .field input:focus{border-color:var(--blue);box-shadow:0 0 14px var(--blue-glow)}
 .note{margin-top:14px;font-size:.8rem;color:var(--silver-dim);text-align:center}
 button.btn{font:inherit;font-weight:700;cursor:pointer}
+
+.brand .wordmark{width:min(86vw,320px);height:auto;display:block;margin:0 auto 6px;filter:drop-shadow(0 0 18px var(--blue-glow))}
+.mark-small{width:64px;height:auto;display:block;margin:0 auto 10px;filter:drop-shadow(0 0 14px var(--blue-glow))}
+
