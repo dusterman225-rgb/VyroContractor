@@ -67,3 +67,22 @@ button.btn{font:inherit;font-weight:700;cursor:pointer}
 .row:last-child{border-bottom:0}
 .row b{color:#fff;font-weight:600;text-align:right;word-break:break-word}
 .btn:disabled{opacity:.5}
+
+.field select,.field textarea{
+  width:100%;padding:14px;border-radius:12px;font-size:1rem;color:#fff;font-family:inherit;
+  background:rgba(5,7,10,.7);border:1px solid var(--line);outline:none;
+}
+.field select:focus,.field textarea:focus{border-color:var(--blue);box-shadow:0 0 14px var(--blue-glow)}
+.field input:disabled,.field select:disabled{opacity:.6}
+.nav{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+.nav .btn{margin-top:0}
+.btn.ghost{background:transparent;border-color:var(--line);box-shadow:none;color:var(--silver)}
+.item{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .grow{flex:1;min-width:0}
+.item b{display:block;color:#fff;font-weight:600;word-break:break-word}
+.item small{color:var(--silver-dim)}
+.item select{padding:8px;border-radius:8px;background:rgba(5,7,10,.7);color:#fff;border:1px solid var(--line);font-size:.85rem}
+.mini{padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--silver);font:inherit;font-size:.8rem;cursor:pointer}
+.mini.danger{color:#ff8a8a;border-color:rgba(255,138,138,.35)}
+.back{display:block;margin-top:20px;text-align:center;color:var(--blue);font-size:.85rem;text-decoration:none}
