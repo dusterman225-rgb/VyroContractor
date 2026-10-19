@@ -22,12 +22,17 @@
     <div class="row"><span>Email</span><b id="mail">...</b></div>
   </div>
 
-  <div class="card">
-    <h2>Coming next</h2>
-    <p>Business profile and team, customers, translator, then leads, estimates and invoices.</p>
+  <div class="nav">
+    <a class="btn" href="profile.html">Business profile</a>
+    <a class="btn" href="team.html">Team</a>
   </div>
 
-  <button class="btn" id="out" type="button">Sign out</button>
+  <div class="card">
+    <h2>Coming next</h2>
+    <p>Customers, translator, then leads, estimates and invoices.</p>
+  </div>
+
+  <button class="btn ghost" id="out" type="button">Sign out</button>
   <div class="note err" id="err"></div>
 </div>
 
@@ -37,25 +42,15 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/auth.js"></script>
 <script>
-  vyro.requireAuth(async function (user) {
-    document.getElementById('mail').textContent = user.email;
-    document.getElementById('who').textContent = 'Signed in';
-    try {
-      var u = await vyro.db.collection('users').doc(user.uid).get();
-      var bizId = u.exists ? u.data().bizId : null;
-      if (!bizId) { document.getElementById('err').textContent = 'No business found for this account.'; return; }
-      var b = await vyro.db.collection('businesses').doc(bizId).get();
-      var m = await vyro.db.collection('businesses').doc(bizId).collection('members').doc(user.uid).get();
-      document.getElementById('bizName').textContent = b.data().name;
-      document.getElementById('who').textContent = b.data().name;
-      document.getElementById('role').textContent = m.exists ? m.data().role : 'unknown';
-    } catch (err) {
-      document.getElementById('err').textContent = vyro.friendly(err);
-    }
+  vyro.start(function (ctx) {
+    document.getElementById('who').textContent = ctx.biz.name;
+    document.getElementById('bizName').textContent = ctx.biz.name;
+    document.getElementById('role').textContent = ctx.role;
+    document.getElementById('mail').textContent = ctx.user.email;
   });
   document.getElementById('out').addEventListener('click', async function () {
     await vyro.signOut(); location.href = 'login.html';
   });
 </script>
 </body>
-  </html>
+</html>
