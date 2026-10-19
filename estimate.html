@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#05070A">
+<title>Estimate - Vyro Business</title>
+<link rel="icon" href="images/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <a href="app.html"><img class="mark-small" src="images/logo.svg" alt="Back to dashboard"></a>
+    <div class="tag" id="pageTag">New estimate</div>
+  </div>
+
+  <div class="card" id="lockNote" style="display:none"><p id="lockText"></p></div>
+
+  <form id="form" autocomplete="off">
+    <div class="card">
+      <h2>Customer</h2>
+      <label class="field"><span>Choose existing customer (optional)</span><select id="cust"><option value="">-</option></select></label>
+      <label class="field"><span>Name</span><input id="cname" type="text" maxlength="120" required></label>
+      <label class="field"><span>Email</span><input id="cemail" type="email" maxlength="120"></label>
+      <label class="field"><span>Phone</span><input id="cphone" type="tel" maxlength="40"></label>
+      <label class="field"><span>Job address</span><textarea id="caddr" rows="2" maxlength="300"></textarea></label>
+    </div>
+
+    <div class="card">
+      <h2>Estimate</h2>
+      <label class="field"><span>Project title</span><input id="title" type="text" maxlength="120" placeholder="Kitchen remodel"></label>
+      <label class="field"><span>Valid until</span><input id="validUntil" type="date"></label>
+    </div>
+
+    <div class="card">
+      <h2>Line items</h2>
+      <div id="lines"></div>
+      <button class="btn ghost" id="addLine" type="button">Add line</button>
+      <label class="field"><span>Discount ($)</span><input id="discount" type="text" inputmode="decimal" placeholder="0.00"></label>
+      <label class="field"><span>Sales tax (%)</span><input id="taxPct" type="text" inputmode="decimal" placeholder="0"></label>
+      <label class="field"><span>Deposit requested (%)</span><input id="depositPct" type="text" inputmode="decimal" placeholder="0"></label>
+    </div>
+
+    <div class="card totals">
+      <h2>Totals</h2>
+      <div class="row"><span>Subtotal</span><b id="tSub">$0.00</b></div>
+      <div class="row"><span>Discount</span><b id="tDisc">$0.00</b></div>
+      <div class="row"><span>Tax</span><b id="tTax">$0.00</b></div>
+      <div class="row big"><span>Total</span><b id="tTotal">$0.00</b></div>
+      <div class="row"><span>Deposit due</span><b id="tDep">$0.00</b></div>
+    </div>
+
+    <div class="card">
+      <h2>Terms and notes</h2>
+      <label class="field"><span>Terms (shown to customer)</span><textarea id="terms" rows="4" maxlength="2000"></textarea></label>
+      <label class="field"><span>Internal notes (not shown)</span><textarea id="internalNotes" rows="3" maxlength="1000"></textarea></label>
+    </div>
+
+    <div class="card">
+      <button class="btn" id="save" type="submit">Save estimate</button>
+      <button class="btn ghost" id="bSent" type="button" style="display:none">Mark as sent</button>
+      <button class="btn ghost" id="bApprove" type="button" style="display:none">Mark as approved</button>
+      <button class="btn ghost" id="bReject" type="button" style="display:none">Mark as rejected</button>
+      <button class="btn ghost" id="bReopen" type="button" style="display:none">Reopen as draft</button>
+      <a class="btn ghost" id="bView" href="#" style="display:none">View, print or email</a>
+      <button class="link" id="bVoid" type="button" style="display:none;color:#ff8a8a">Void estimate</button>
+      <button class="link" id="bDel" type="button" style="display:none;color:#ff8a8a">Delete estimate</button>
+      <div class="note" id="msg"></div>
+    </div>
+  </form>
+
+  <a class="back" href="estimates.html">Back to estimates</a>
+  <div class="note err" id="err"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/util.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  var TYPES = ['Labor', 'Materials', 'Other'];
+  var DEFAULT_TERMS = 'Balance is due on completion unless agreed otherwise in writing. This estimate is valid until the date shown. Prices may change if the scope of work changes.';
+  var $ = function (id) { return document.getElementById(id); };
+  function pct(v) { return Math.min(100, Math.max(0, parseFloat(v) || 0)); }
+
+  vyro.start(async function (ctx) {
+    var params = new URLSearchParams(location.search);
+    var id = params.get('id');
+    var leadId = params.get('lead') || '';
+    var col = ctx.bizRef.collection('estimates');
+    var canDelete = ctx.role === 'owner' || ctx.role === 'supervisor';
+    var est = null;
+    var customers = {};
+
+    function say(t, cls) { $('msg').textContent = t; $('msg').className = 'note ' + (cls || ''); }
+
+    // ---------- line items ----------
+    function addRow(it) {
+      it = it || { type: 'Labor', description: '', qty: 1, unitCents: 0 };
+      var row = vyro.el('div', 'line');
+      var r1 = vyro.el('div', 'r1');
+      var type = vyro.el('select');
+      TYPES.forEach(function (t) { var o = vyro.el('option', '', t); o.value = t; type.appendChild(o); });
+      type.value = it.type || 'Labor';
+      var desc = vyro.el('input'); desc.type = 'text'; desc.maxLength = 200; desc.placeholder = 'Description'; desc.value = it.description || '';
+      r1.appendChild(type); r1.appendChild(desc); row.appendChild(r1);
+
+      var r = vyro.el('div', 'r');
+      var w1 = vyro.el('div'); w1.appendChild(vyro.el('small', '', 'Qty'));
+      var qty = vyro.el('input'); qty.type = 'text'; qty.inputMode = 'decimal'; qty.value = it.qty == null ? 1 : it.qty; w1.appendChild(qty);
+      var w2 = vyro.el('div'); w2.appendChild(vyro.el('small', '', 'Unit price $'));
+      var price = vyro.el('input'); price.type = 'text'; price.inputMode = 'decimal'; price.placeholder = '0.00';
+      price.value = it.unitCents ? (it.unitCents / 100).toFixed(2) : ''; w2.appendChild(price);
+      var w3 = vyro.el('div'); w3.appendChild(vyro.el('small', '', 'Amount'));
+      var amt = vyro.el('div', 'amt', '$0.00'); w3.appendChild(amt);
+      r.appendChild(w1); r.appendChild(w2); r.appendChild(w3); row.appendChild(r);
+
+      var rm = vyro.el('button', 'mini danger', 'Remove line'); rm.type = 'button'; rm.style.marginTop = '8px';
+      rm.addEventListener('click', function () { row.remove(); recalc(); });
+      row.appendChild(rm);
+
+      [type, desc, qty, price].forEach(function (x) { x.addEventListener('input', recalc); });
+      row._read = function () {
+        return { type: type.value, description: desc.value.trim(), qty: parseFloat(qty.value) || 0, unitCents: vutil.toCents(price.value) };
+      };
+      row._amt = amt;
+      $('lines').appendChild(row);
+    }
+
+    function getItems() {
+      var out = [];
+      Array.prototype.forEach.call($('lines').children, function (row) {
+        var it = row._read();
+        if (it.description || it.unitCents) out.push(it);
+      });
+      return out;
+    }
+
+    function calc() {
+      return vutil.totals(getItems(), vutil.toCents($('discount').value), parseFloat($('taxPct').value) || 0);
+    }
+
+    function recalc() {
+      Array.prototype.forEach.call($('lines').children, function (row) {
+        var it = row._read();
+        row._amt.textContent = vutil.fmt(Math.round(it.qty * it.unitCents));
+      });
+      var t = calc();
+      $('tSub').textContent = vutil.fmt(t.subtotalCents);
+      $('tDisc').textContent = '-' + vutil.fmt(t.discountCents);
+      $('tTax').textContent = vutil.fmt(t.taxCents);
+      $('tTotal').textContent = vutil.fmt(t.totalCents);
+      $('tDep').textContent = vutil.fmt(Math.round(t.totalCents * pct($('depositPct').value) / 100));
+    }
+
+    ['discount', 'taxPct', 'depositPct'].forEach(function (k) { $(k).addEventListener('input', recalc); });
+    $('addLine').addEventListener('click', function () { addRow(); });
+
+    // ---------- customers ----------
+    try {
+      var cs = await ctx.bizRef.collection('customers').orderBy('nameLower').get();
+      cs.forEach(function (d) {
+        var c = d.data(); customers[d.id] = c;
+        var o = vyro.el('option', '', c.name); o.value = d.id; $('cust').appendChild(o);
+      });
+    } catch (e) { /* optional */ }
+
+    $('cust').addEventListener('change', function () {
+      var c = customers[this.value]; if (!c) return;
+      $('cname').value = c.name; $('cemail').value = c.email || ''; $('cphone').value = c.phone || ''; $('caddr').value = c.address || '';
+    });
+
+    // ---------- load ----------
+    function fill(e) {
+      $('cust').value = e.customerId || '';
+      $('cname').value = e.customerName || ''; $('cemail').value = e.customerEmail || '';
+      $('cphone').value = e.customerPhone || ''; $('caddr').value = e.address || '';
+      $('title').value = e.title || ''; $('validUntil').value = e.validUntil || '';
+      $('lines').textContent = '';
+      (e.lineItems || []).forEach(addRow);
+      if (!(e.lineItems || []).length) addRow();
+      $('discount').value = e.discountCents ? (e.discountCents / 100).toFixed(2) : '';
+      $('taxPct').value = e.taxPct || ''; $('depositPct').value = e.depositPct || '';
+      $('terms').value = e.terms || ''; $('internalNotes').value = e.internalNotes || '';
+    }
+
+    if (id) {
+      var s = await col.doc(id).get();
+      if (!s.exists) { $('err').textContent = 'Estimate not found.'; return; }
+      est = s.data(); est.id = id; leadId = est.leadId || '';
+      fill(est);
+    } else {
+      $('terms').value = DEFAULT_TERMS;
+      var d = new Date(); d.setDate(d.getDate() + 30);
+      $('validUntil').value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      addRow();
+      if (leadId) {
+        try {
+          var ls = await ctx.bizRef.collection('leads').doc(leadId).get();
+          if (ls.exists) {
+            var l = ls.data();
+            $('cname').value = l.name || ''; $('cemail').value = l.email || ''; $('cphone').value = l.phone || '';
+            $('caddr').value = l.address || ''; $('title').value = (l.jobDetails || '').slice(0, 80);
+            if (l.customerId) $('cust').value = l.customerId;
+          }
+        } catch (e) { /* ignore */ }
+      }
+    }
+    recalc();
+
+    // ---------- state / buttons ----------
+    var status = est ? est.status : 'Draft';
+    var locked = status === 'Approved' || status === 'Voided';
+    $('pageTag').textContent = est ? (est.number + ' \u00b7 ' + status) : 'New estimate';
+
+    if (locked) {
+      Array.prototype.forEach.call($('form').querySelectorAll('input,select,textarea,.line .mini'), function (x) { x.disabled = true; });
+      $('addLine').style.display = 'none'; $('save').style.display = 'none';
+      $('lockNote').style.display = 'block';
+      $('lockText').textContent = status === 'Approved'
+        ? 'This estimate is approved and locked. To change it, void it and make a new one.'
+        : 'This estimate is voided. Reopen it as a draft to edit it.';
+    }
+    if (est) {
+      $('bView').style.display = 'block'; $('bView').href = 'estimate-view.html?id=' + est.id;
+      if (status !== 'Voided') $('bVoid').style.display = 'block';
+      if (canDelete) $('bDel').style.display = 'block';
+    }
+    if (status === 'Draft') $('bSent').style.display = 'block';
+    if (status === 'Draft' || status === 'Sent') $('bApprove').style.display = 'block';
+    if (status === 'Sent') $('bReject').style.display = 'block';
+    if (status === 'Rejected' || status === 'Voided') $('bReopen').style.display = 'block';
+
+    // ---------- save ----------
+    async function save(newStatus) {
+      var name = $('cname').value.trim();
+      if (!name) { say('Customer name is required.', 'err'); return; }
+      var items = getItems(), t = calc();
+      var st = newStatus || status;
+      if ((st === 'Sent' || st === 'Approved') && (!items.length || t.totalCents <= 0)) {
+        say('Add at least one line item with a price first.', 'err'); return;
+      }
+      var data = {
+        customerId: $('cust').value || '', customerName: name, customerEmail: $('cemail').value.trim(),
+        customerPhone: $('cphone').value.trim(), address: $('caddr').value.trim(), leadId: leadId,
+        title: $('title').value.trim(), validUntil: $('validUntil').value,
+        lineItems: items, discountCents: t.discountCents, taxPct: parseFloat($('taxPct').value) || 0,
+        depositPct: pct($('depositPct').value), subtotalCents: t.subtotalCents, taxCents: t.taxCents,
+        totalCents: t.totalCents, terms: $('terms').value.trim(), internalNotes: $('internalNotes').value.trim(),
+        status: st, updatedAt: vyro.stamp()
+      };
+      if (newStatus && newStatus !== status) {
+        var tsKey = { Sent: 'sentAt', Approved: 'approvedAt', Rejected: 'rejectedAt', Voided: 'voidedAt' }[newStatus];
+        if (tsKey) data[tsKey] = vyro.stamp();
+      }
+
+      Array.prototype.forEach.call(document.querySelectorAll('.btn,.link'), function (b) { b.disabled = true; });
+      say('Saving...');
+      try {
+        var savedId;
+        if (est) {
+          await col.doc(est.id).update(data); savedId = est.id;
+        } else {
+          var ref = col.doc(), cref = ctx.bizRef.collection('counters').doc('estimate');
+          data.createdAt = vyro.stamp(); data.createdBy = ctx.user.uid;
+          await vyro.db.runTransaction(async function (tx) {
+            var cs = await tx.get(cref);
+            var n = cs.exists ? cs.data().n + 1 : 1;
+            tx.set(cref, { n: n });
+            data.number = 'EST-' + String(n).padStart(4, '0');
+            tx.set(ref, data);
+          });
+          savedId = ref.id;
+        }
+        // move the lead along when the estimate is sent
+        if (st === 'Sent' && status !== 'Sent' && leadId) {
+          try {
+            var lref = ctx.bizRef.collection('leads').doc(leadId);
+            var lsnap = await lref.get();
+            if (lsnap.exists && ['New', 'Contacted'].indexOf(lsnap.data().status) > -1) {
+              await lref.update({ status: 'Estimate Sent', statusChangedAt: vyro.stamp(), updatedAt: vyro.stamp() });
+            }
+          } catch (e) { /* estimate is saved; lead update is optional */ }
+        }
+        location.replace('estimate.html?id=' + savedId);
+      } catch (err) {
+        say(vyro.friendly(err), 'err');
+        Array.prototype.forEach.call(document.querySelectorAll('.btn,.link'), function (b) { b.disabled = false; });
+      }
+    }
+
+    $('form').addEventListener('submit', function (e) { e.preventDefault(); save(null); });
+    $('bSent').addEventListener('click', function () { save('Sent'); });
+    $('bApprove').addEventListener('click', function () { save('Approved'); });
+    $('bReject').addEventListener('click', function () { save('Rejected'); });
+    $('bReopen').addEventListener('click', function () { save('Draft'); });
+    $('bVoid').addEventListener('click', function () { if (confirm('Void this estimate?')) save('Voided'); });
+    $('bDel').addEventListener('click', async function () {
+      if (!confirm('Delete this estimate permanently?')) return;
+      try { await col.doc(est.id).delete(); location.href = 'estimates.html'; } catch (e) { say(vyro.friendly(e), 'err'); }
+    });
+  });
+</script>
+</body>
+</html>
