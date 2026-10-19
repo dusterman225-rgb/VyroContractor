@@ -59,3 +59,11 @@ button.btn{font:inherit;font-weight:700;cursor:pointer}
 }
 .field input:focus{border-color:var(--blue);box-shadow:0 0 14px var(--blue-glow)}
 .note{margin-top:14px;font-size:.8rem;color:var(--silver-dim);text-align:center}
+
+.err{color:#ff8a8a}
+.ok{color:#7fe3b0}
+.link{display:block;width:100%;margin-top:14px;text-align:center;color:var(--blue);font:inherit;font-size:.85rem;text-decoration:none;background:none;border:0;cursor:pointer}
+.row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:.9rem}
+.row:last-child{border-bottom:0}
+.row b{color:#fff;font-weight:600;text-align:right;word-break:break-word}
+.btn:disabled{opacity:.5}
