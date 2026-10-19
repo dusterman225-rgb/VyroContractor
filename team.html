@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#05070A">
+<title>Team - Vyro Business</title>
+<link rel="icon" href="images/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <a href="app.html"><img class="mark-small" src="images/logo.svg" alt="Back to dashboard"></a>
+    <div class="tag">Team</div>
+  </div>
+
+  <div class="card">
+    <h2>Members</h2>
+    <div id="members"></div>
+  </div>
+
+  <div class="card" id="inviteCard" style="display:none">
+    <h2>Invite someone</h2>
+    <p>Create a one-time link and send it to them yourself (text or email). Anyone with the link can join, so only share it with the person you mean.</p>
+    <label class="field"><span>Role</span>
+      <select id="inviteRole">
+        <option value="employee">Employee</option>
+        <option value="supervisor">Supervisor</option>
+      </select>
+    </label>
+    <button class="btn" id="make" type="button">Create invite link</button>
+    <div id="newInvite" style="display:none">
+      <label class="field"><span>Send this link</span><input id="link" type="text" readonly></label>
+      <button class="btn ghost" id="copy" type="button">Copy link</button>
+    </div>
+    <div class="note" id="imsg"></div>
+  </div>
+
+  <div class="card" id="pendingCard" style="display:none">
+    <h2>Pending invites</h2>
+    <div id="pending"></div>
+  </div>
+
+  <a class="back" href="app.html">Back to dashboard</a>
+  <div class="note err" id="err"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  var errBox = document.getElementById('err');
+  function fail(e) { errBox.textContent = vyro.friendly(e); }
+  function newCode() {
+    var a = new Uint8Array(16); crypto.getRandomValues(a);
+    return Array.from(a, function (x) { return x.toString(36).padStart(2, '0'); }).join('').slice(0, 24);
+  }
+  function linkFor(code) { return location.origin + '/join.html?code=' + code; }
+  async function copyText(t, input) {
+    try { await navigator.clipboard.writeText(t); return true; }
+    catch (e) { if (input) { input.focus(); input.select(); } return false; }
+  }
+
+  vyro.start(function (ctx) {
+    var isOwner = ctx.role === 'owner';
+
+    async function loadMembers() {
+      var box = document.getElementById('members'); box.textContent = '';
+      var snap = await ctx.bizRef.collection('members').get();
+      snap.forEach(function (d) {
+        var m = d.data();
+        var row = vyro.el('div', 'item');
+        var left = vyro.el('div', 'grow');
+        left.appendChild(vyro.el('b', '', m.name || m.email));
+        left.appendChild(vyro.el('small', '', m.email + (d.id === ctx.user.uid ? ' (you)' : '')));
+        row.appendChild(left);
+
+        if (isOwner && d.id !== ctx.user.uid && m.role !== 'owner') {
+          var sel = vyro.el('select');
+          ['supervisor', 'employee'].forEach(function (r) {
+            var o = vyro.el('option', '', r); o.value = r; if (m.role === r) o.selected = true; sel.appendChild(o);
+          });
+          sel.addEventListener('change', async function () {
+            try { await d.ref.update({ role: sel.value }); } catch (e) { fail(e); loadMembers(); }
+          });
+          row.appendChild(sel);
+          var rm = vyro.el('button', 'mini danger', 'Remove'); rm.type = 'button';
+          rm.addEventListener('click', async function () {
+            if (!confirm('Remove ' + (m.name || m.email) + ' from the team?')) return;
+            try { await d.ref.delete(); loadMembers(); } catch (e) { fail(e); }
+          });
+          row.appendChild(rm);
+        } else {
+          row.appendChild(vyro.el('small', '', m.role));
+        }
+        box.appendChild(row);
+      });
+    }
+
+    async function loadPending() {
+      var box = document.getElementById('pending'); box.textContent = '';
+      var snap = await vyro.db.collection('invites')
+        .where('bizId', '==', ctx.bizId).where('used', '==', false).get();
+      document.getElementById('pendingCard').style.display = snap.empty ? 'none' : 'block';
+      snap.forEach(function (d) {
+        var row = vyro.el('div', 'item');
+        var left = vyro.el('div', 'grow');
+        left.appendChild(vyro.el('b', '', d.data().role + ' invite'));
+        left.appendChild(vyro.el('small', '', 'Not used yet'));
+        row.appendChild(left);
+        var cp = vyro.el('button', 'mini', 'Copy link'); cp.type = 'button';
+        cp.addEventListener('click', async function () {
+          var ok = await copyText(linkFor(d.id));
+          cp.textContent = ok ? 'Copied' : 'Copy failed';
+        });
+        row.appendChild(cp);
+        var rv = vyro.el('button', 'mini danger', 'Revoke'); rv.type = 'button';
+        rv.addEventListener('click', async function () {
+          try { await d.ref.delete(); loadPending(); } catch (e) { fail(e); }
+        });
+        row.appendChild(rv);
+        box.appendChild(row);
+      });
+    }
+
+    loadMembers().catch(fail);
+
+    if (isOwner) {
+      document.getElementById('inviteCard').style.display = 'block';
+      loadPending().catch(fail);
+
+      document.getElementById('make').addEventListener('click', async function () {
+        var btn = this; btn.disabled = true;
+        var code = newCode();
+        try {
+          await vyro.db.collection('invites').doc(code).set({
+            bizId: ctx.bizId, role: document.getElementById('inviteRole').value,
+            used: false, createdBy: ctx.user.uid, createdAt: vyro.stamp()
+          });
+          var link = document.getElementById('link');
+          link.value = linkFor(code);
+          document.getElementById('newInvite').style.display = 'block';
+          loadPending();
+        } catch (e) { fail(e); }
+        btn.disabled = false;
+      });
+
+      document.getElementById('copy').addEventListener('click', async function () {
+        var ok = await copyText(document.getElementById('link').value, document.getElementById('link'));
+        this.textContent = ok ? 'Copied' : 'Press and hold the link to copy it';
+      });
+    }
+  });
+</script>
+</body>
+</html>
