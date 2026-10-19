@@ -1,0 +1,45 @@
+:root{
+  --blue:#4B9CD3;
+  --blue-glow:rgba(75,156,211,.45);
+  --silver:#C9D1D9;
+  --silver-dim:#8B96A3;
+  --black:#05070A;
+  --panel:#0C1117;
+  --line:rgba(201,209,217,.14);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  color:var(--silver);
+  background:
+    radial-gradient(900px 500px at 50% -10%,rgba(75,156,211,.22),transparent 60%),
+    linear-gradient(rgba(75,156,211,.05) 1px,transparent 1px) 0 0/40px 40px,
+    linear-gradient(90deg,rgba(75,156,211,.05) 1px,transparent 1px) 0 0/40px 40px,
+    var(--black);
+}
+.wrap{max-width:520px;margin:0 auto;padding:48px 20px}
+.logo{
+  font-size:2.4rem;font-weight:800;letter-spacing:.35em;text-transform:uppercase;
+  background:linear-gradient(90deg,#fff,var(--silver),var(--blue));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 0 30px var(--blue-glow);
+}
+.tag{color:var(--silver-dim);letter-spacing:.2em;font-size:.75rem;text-transform:uppercase;margin-top:6px}
+.card{
+  margin-top:28px;padding:20px;border-radius:16px;
+  background:linear-gradient(160deg,rgba(201,209,217,.06),rgba(12,17,23,.9));
+  border:1px solid var(--line);
+  box-shadow:0 0 0 1px rgba(75,156,211,.08),0 10px 40px rgba(0,0,0,.6);
+}
+.card h2{margin:0 0 6px;font-size:1rem;color:#fff;letter-spacing:.08em;text-transform:uppercase}
+.card p{margin:0;color:var(--silver-dim);line-height:1.5}
+.status{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:.85rem;color:var(--blue)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--blue);box-shadow:0 0 12px var(--blue);animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.btn{
+  display:block;width:100%;margin-top:16px;padding:14px;border-radius:12px;border:1px solid var(--blue);
+  background:linear-gradient(180deg,rgba(75,156,211,.25),rgba(75,156,211,.08));
+  color:#fff;font-weight:700;letter-spacing:.12em;text-transform:uppercase;text-align:center;text-decoration:none;
+  box-shadow:0 0 20px var(--blue-glow);
+}
