@@ -86,3 +86,11 @@ button.btn{font:inherit;font-weight:700;cursor:pointer}
 .mini{padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--silver);font:inherit;font-size:.8rem;cursor:pointer}
 .mini.danger{color:#ff8a8a;border-color:rgba(255,138,138,.35)}
 .back{display:block;margin-top:20px;text-align:center;color:var(--blue);font-size:.85rem;text-decoration:none}
+
+.search{
+  width:100%;padding:14px;border-radius:12px;font-size:1rem;color:#fff;font-family:inherit;
+  background:rgba(5,7,10,.7);border:1px solid var(--line);outline:none;margin-bottom:8px;
+}
+.search:focus{border-color:var(--blue);box-shadow:0 0 14px var(--blue-glow)}
+.item .grow{cursor:pointer}
+a.mini{text-decoration:none;display:inline-block}
