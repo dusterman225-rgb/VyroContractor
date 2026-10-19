@@ -19,13 +19,14 @@ body{
     var(--black);
 }
 .wrap{max-width:520px;margin:0 auto;padding:48px 20px}
-.logo{
-  font-size:2.4rem;font-weight:800;letter-spacing:.35em;text-transform:uppercase;
-  background:linear-gradient(90deg,#fff,var(--silver),var(--blue));
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  text-shadow:0 0 30px var(--blue-glow);
-}
+
+/* Brand */
+.brand{text-align:center}
+.brand .wordmark{width:min(86vw,320px);height:auto;display:block;margin:0 auto 6px;filter:drop-shadow(0 0 18px var(--blue-glow))}
+.mark-small{width:84px;height:auto;display:block;margin:0 auto 10px;filter:drop-shadow(0 0 14px var(--blue-glow))}
 .tag{color:var(--silver-dim);letter-spacing:.2em;font-size:.75rem;text-transform:uppercase;margin-top:6px}
+
+/* Cards */
 .card{
   margin-top:28px;padding:20px;border-radius:16px;
   background:linear-gradient(160deg,rgba(201,209,217,.06),rgba(12,17,23,.9));
@@ -34,18 +35,22 @@ body{
 }
 .card h2{margin:0 0 6px;font-size:1rem;color:#fff;letter-spacing:.08em;text-transform:uppercase}
 .card p{margin:0;color:var(--silver-dim);line-height:1.5}
+
+/* Status */
 .status{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:.85rem;color:var(--blue)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);box-shadow:0 0 12px var(--blue);animation:pulse 2s infinite}
 @keyframes pulse{50%{opacity:.35}}
+
+/* Buttons */
 .btn{
   display:block;width:100%;margin-top:16px;padding:14px;border-radius:12px;border:1px solid var(--blue);
   background:linear-gradient(180deg,rgba(75,156,211,.25),rgba(75,156,211,.08));
   color:#fff;font-weight:700;letter-spacing:.12em;text-transform:uppercase;text-align:center;text-decoration:none;
   box-shadow:0 0 20px var(--blue-glow);
 }
+button.btn{font:inherit;font-weight:700;cursor:pointer}
 
-.brand{text-align:center}
-.mark{width:96px;height:96px;display:block;margin:0 auto 14px;filter:drop-shadow(0 0 18px var(--blue-glow))}
+/* Forms */
 .field{display:block;margin-top:14px}
 .field span{display:block;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--silver-dim);margin-bottom:6px}
 .field input{
@@ -54,8 +59,3 @@ body{
 }
 .field input:focus{border-color:var(--blue);box-shadow:0 0 14px var(--blue-glow)}
 .note{margin-top:14px;font-size:.8rem;color:var(--silver-dim);text-align:center}
-button.btn{font:inherit;font-weight:700;cursor:pointer}
-
-.brand .wordmark{width:min(86vw,320px);height:auto;display:block;margin:0 auto 6px;filter:drop-shadow(0 0 18px var(--blue-glow))}
-.mark-small{width:64px;height:auto;display:block;margin:0 auto 10px;filter:drop-shadow(0 0 14px var(--blue-glow))}
-
