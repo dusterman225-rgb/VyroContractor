@@ -16,21 +16,30 @@
   </div>
 
   <div class="card">
+    <h2>Needs your attention</h2>
+    <div class="row"><span>New leads</span><b id="nNew">...</b></div>
+    <div class="row"><span>Leads waiting 2+ days</span><b id="nStale">...</b></div>
+    <div class="row"><span>Follow-ups due</span><b id="nDue">...</b></div>
+    <a class="back" href="leads.html" style="margin-top:12px">Open leads</a>
+  </div>
+
+  <div class="nav">
+    <a class="btn" href="leads.html">Leads</a>
+    <a class="btn" href="customers.html">Customers</a>
+    <a class="btn" href="profile.html">Business profile</a>
+    <a class="btn" href="team.html">Team</a>
+  </div>
+
+  <div class="card">
     <h2>Your business</h2>
     <div class="row"><span>Name</span><b id="bizName">...</b></div>
     <div class="row"><span>Your role</span><b id="role">...</b></div>
     <div class="row"><span>Email</span><b id="mail">...</b></div>
   </div>
 
-  <div class="nav">
-    <a class="btn" href="customers.html" style="grid-column:1/-1">Customers</a>
-    <a class="btn" href="profile.html">Business profile</a>
-    <a class="btn" href="team.html">Team</a>
-  </div>
-
   <div class="card">
     <h2>Coming next</h2>
-    <p></p>Translator, then leads, estimates and invoices.</p>
+    <p>Estimates, invoices, jobs and bills.</p>
   </div>
 
   <button class="btn ghost" id="out" type="button">Sign out</button>
@@ -43,13 +52,40 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/auth.js"></script>
 <script>
-  vyro.start(function (ctx) {
-    document.getElementById('who').textContent = ctx.biz.name;
-    document.getElementById('bizName').textContent = ctx.biz.name;
-    document.getElementById('role').textContent = ctx.role;
-    document.getElementById('mail').textContent = ctx.user.email;
+  var $ = function (id) { return document.getElementById(id); };
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  vyro.start(async function (ctx) {
+    $('who').textContent = ctx.biz.name;
+    $('bizName').textContent = ctx.biz.name;
+    $('role').textContent = ctx.role;
+    $('mail').textContent = ctx.user.email;
+
+    try {
+      var snap = await ctx.bizRef.collection('leads').get();
+      var today = todayStr(), now = Date.now(), nNew = 0, nStale = 0, nDue = 0;
+      snap.forEach(function (d) {
+        var l = d.data();
+        if (l.status === 'New') {
+          nNew++;
+          var t = l.createdAt && l.createdAt.toMillis ? l.createdAt.toMillis() : now;
+          if (now - t > 2 * 86400000) nStale++;
+        }
+        if (l.followUpOn && l.followUpOn <= today && l.status !== 'Won' && l.status !== 'Lost') nDue++;
+      });
+      $('nNew').textContent = nNew;
+      $('nStale').textContent = nStale; if (nStale) $('nStale').className = 'late';
+      $('nDue').textContent = nDue; if (nDue) $('nDue').className = 'late';
+    } catch (e) {
+      $('nNew').textContent = $('nStale').textContent = $('nDue').textContent = '-';
+      $('err').textContent = 'Could not load leads. Check the Firestore rules were published.';
+    }
   });
-  document.getElementById('out').addEventListener('click', async function () {
+
+  $('out').addEventListener('click', async function () {
     await vyro.signOut(); location.href = 'login.html';
   });
 </script>
