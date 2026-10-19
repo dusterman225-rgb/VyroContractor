@@ -1,8 +1,8 @@
 window.VYRO_FIREBASE_CONFIG = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE_AUTH_DOMAIN",
+  apiKey: "AIzaSyDFBdGYAfvnT0XbGjMocUsqTmcErKP987I",
+  authDomain: "vyrocontractor.firebaseapp.com",
   projectId: "vyrocontractor",
-  storageBucket: "PASTE_STORAGE_BUCKET",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID"
+  storageBucket: "vyrocontractor.firebasestorage.app",
+  messagingSenderId: "28022273809",
+  appId: "1:28022273809:web:96b06ae5b8bea99fe07eb0"
 };
