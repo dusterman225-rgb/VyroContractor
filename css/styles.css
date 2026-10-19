@@ -94,3 +94,6 @@ button.btn{font:inherit;font-weight:700;cursor:pointer}
 .search:focus{border-color:var(--blue);box-shadow:0 0 14px var(--blue-glow)}
 .item .grow{cursor:pointer}
 a.mini{text-decoration:none;display:inline-block}
+
+.item{flex-wrap:wrap}
+.item .grow{flex:1 1 160px}
