@@ -135,3 +135,8 @@ a.choice{display:block;text-decoration:none;color:inherit}
 a.choice:hover{border-color:var(--blue);box-shadow:0 0 18px var(--blue-glow)}
 .choice.off{opacity:.55}
 .soon{margin-top:12px;font-size:.8rem;color:var(--silver-dim);letter-spacing:.1em;text-transform:uppercase}
+
+.pill.Paid{border-color:#7fe3b0;color:#7fe3b0}
+.pill.PartiallyPaid{border-color:#f0c36d;color:#f0c36d}
+.pill.Overdue{border-color:rgba(255,138,138,.5);color:#ff8a8a}
+.struck{text-decoration:line-through;opacity:.6}
