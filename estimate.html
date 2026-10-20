@@ -59,17 +59,23 @@
     </div>
 
     <div class="card">
-      <button class="btn" id="save" type="submit">Save estimate</button>
-      <button class="btn" id="bEmail" type="button" style="display:none">Send estimate by email</button>
-      <button class="btn ghost" id="bSent" type="button" style="display:none">Mark as sent (hand delivered, etc.)</button>
+      <button class="btn" id="bSend" type="button">Send</button>
       <button class="btn ghost" id="bApprove" type="button" style="display:none">Mark as approved</button>
       <button class="btn ghost" id="bReject" type="button" style="display:none">Mark as rejected</button>
       <button class="btn ghost" id="bReopen" type="button" style="display:none">Reopen as draft</button>
       <a class="btn ghost" id="bView" href="#" style="display:none">View, print or email</a>
       <a class="btn ghost" id="bInvoice" href="#" style="display:none">Open job</a>
+      <button class="link" id="save" type="submit">Save without sending</button>
       <button class="link" id="bVoid" type="button" style="display:none;color:#ff8a8a">Void estimate</button>
       <button class="link" id="bDel" type="button" style="display:none;color:#ff8a8a">Delete estimate</button>
       <div class="note" id="msg"></div>
+    </div>
+    <div class="card" id="sendCard" style="display:none">
+      <h2 id="sendTitle">How do you want to send it?</h2>
+      <p>Your estimate is saved.</p>
+      <button class="btn" id="sendEmail" type="button">Email it to the customer</button>
+      <button class="btn ghost" id="sendManual" type="button">Mark as sent (I'm handing it over myself)</button>
+      <button class="link" id="sendNot" type="button">Not now</button>
     </div>
     <div class="card" id="sentAsk" style="display:none">
       <h2>Did the email go out?</h2>
@@ -258,19 +264,25 @@
       if (canDelete) $('bDel').style.display = 'block';
     }
     if (status === 'Approved') { $('bInvoice').style.display = 'block'; $('bInvoice').href = 'job.html?id=' + est.id; }
-    if (status === 'Draft') $('bSent').style.display = 'block';
-    if (est && (status === 'Draft' || status === 'Sent')) $('bEmail').style.display = 'block';
+    var canSend = !est || status === 'Draft' || status === 'Sent';
+    $('bSend').style.display = canSend ? 'block' : 'none';
+    $('bSend').textContent = (!est || status === 'Draft') ? 'Send' : 'Send again';
+    if (est && canSend && params.get('send') === '1') {
+      if (status !== 'Draft') { $('sendTitle').textContent = 'Send it again'; $('sendManual').style.display = 'none'; }
+      $('sendCard').style.display = 'block';
+      setTimeout(function () { $('sendCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150);
+    }
     if (status === 'Draft' || status === 'Sent') $('bApprove').style.display = 'block';
     if (status === 'Sent') $('bReject').style.display = 'block';
     if (status === 'Rejected' || status === 'Voided') $('bReopen').style.display = 'block';
 
     // ---------- save ----------
-    async function save(newStatus) {
+    async function save(newStatus, openSend) {
       var name = $('cname').value.trim();
       if (!name) { say('Choose a customer, or type a name.', 'err'); return; }
       var items = getItems(), t = calc();
       var st = newStatus || status;
-      if ((st === 'Sent' || st === 'Approved') && (!items.length || t.totalCents <= 0)) {
+      if ((st === 'Sent' || st === 'Approved' || openSend) && (!items.length || t.totalCents <= 0)) {
         say('Add at least one line item with a price first.', 'err'); return;
       }
       var data = {
@@ -319,7 +331,7 @@
         if (st === 'Approved' && status !== 'Approved') {
           try {
             var jref = ctx.bizRef.collection('jobs').doc(savedId);
-                        var jsnap = await jref.get();
+            var jsnap = await jref.get();
             if (data.customerId) { try { await ctx.bizRef.collection('customers').doc(data.customerId).update({ archived: false, archivedAt: null }); } catch (e2) { /* optional */ } }
             if (!jsnap.exists) {
               await jref.set({
@@ -345,7 +357,7 @@
         if (st === 'Voided' && status === 'Approved') {
           try { await ctx.bizRef.collection('jobs').doc(savedId).update({ status: 'Cancelled', updatedAt: vyro.stamp() }); } catch (e) { /* no job */ }
         }
-        location.replace('estimate.html?id=' + savedId);
+        location.replace('estimate.html?id=' + savedId + (openSend ? '&send=1' : ''));
       } catch (err) {
         say(vyro.friendly(err), 'err');
         Array.prototype.forEach.call(document.querySelectorAll('.btn,.link'), function (b) { b.disabled = false; });
@@ -353,9 +365,8 @@
     }
 
     $('form').addEventListener('submit', function (e) { e.preventDefault(); save(null); });
-    $('bEmail').addEventListener('click', function () {
-      var t = calc(), items = getItems();
-      if (!items.length || t.totalCents <= 0) { say('Add at least one line item with a price first.', 'err'); return; }
+    function openEmail() {
+      var t = calc();
       var to = $('cemail').value.trim();
       if (!to) say('This customer has no email on file. Add one on their customer page, or type it in your mail app.', 'err');
       else say('');
@@ -366,12 +377,16 @@
         (dep ? ', with a deposit of ' + vutil.fmt(dep) + ' to get started' : '') +
         ($('validUntil').value ? '. This estimate is valid until ' + $('validUntil').value : '') +
         '.\n\nPlease let me know if you have any questions or would like to move forward.\n\nThank you,\n' + ctx.biz.name;
-      window.location.href = 'mailto:' + to + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+      $('sendCard').style.display = 'none';
       if (status === 'Draft') $('sentAsk').style.display = 'block';
-    });
+      window.location.href = 'mailto:' + to + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    }
+    $('bSend').addEventListener('click', function () { save(null, true); });
+    $('sendEmail').addEventListener('click', openEmail);
+    $('sendManual').addEventListener('click', function () { save('Sent'); });
+    $('sendNot').addEventListener('click', function () { $('sendCard').style.display = 'none'; });
     $('askYes').addEventListener('click', function () { save('Sent'); });
     $('askNo').addEventListener('click', function () { $('sentAsk').style.display = 'none'; });
-    $('bSent').addEventListener('click', function () { save('Sent'); });
     $('bApprove').addEventListener('click', function () { save('Approved'); });
     $('bReject').addEventListener('click', function () { save('Rejected'); });
     $('bReopen').addEventListener('click', function () { save('Draft'); });
