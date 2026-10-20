@@ -12,7 +12,7 @@
 <div class="wrap">
   <div class="brand">
     <a href="app.html"><img class="mark-small" src="images/logo.svg" alt="Back to dashboard"></a>
-    <div class="tag">Customer</div>
+    <div class="tag" id="pageTag">Customer</div>
   </div>
 
   <div class="card">
@@ -22,13 +22,25 @@
   </div>
 
   <div class="card">
+    <h2>Jobs</h2>
+    <div id="jobs"></div>
+    <div class="note" id="noJobs"></div>
+  </div>
+
+  <div class="card">
     <h2>Estimates</h2>
     <div id="ests"></div>
     <div class="note" id="none"></div>
     <a class="btn" id="newEst" href="#">New estimate</a>
   </div>
 
-  <a class="back" href="customers.html">Back to customers</a>
+  <div class="card">
+    <button class="btn ghost" id="bArchive" type="button" style="display:none">Archive customer</button>
+    <button class="btn" id="bRestore" type="button" style="display:none">Restore to active customers</button>
+    <div class="note" id="aMsg"></div>
+  </div>
+
+  <a class="back" id="back" href="customers.html">Back to customers</a>
   <div class="note err" id="err"></div>
 </div>
 
@@ -38,11 +50,13 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/util.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/cascade.js"></script>
 <script>
   var $ = function (id) { return document.getElementById(id); };
   var LANG = { en: 'English', es: 'Spanish', pt: 'Portuguese', fr: 'French', zh: 'Chinese', vi: 'Vietnamese',
                tl: 'Tagalog', ar: 'Arabic', ru: 'Russian', ko: 'Korean', other: 'Other' };
   function cleanPhone(p) { return (p || '').replace(/[^0-9+]/g, ''); }
+  function cls(s) { return s.replace(/ /g, ''); }
 
   vyro.start(async function (ctx) {
     var id = new URLSearchParams(location.search).get('id');
@@ -51,6 +65,14 @@
     var c = s.data();
 
     $('cName').textContent = c.name;
+    if (c.archived) {
+      $('pageTag').textContent = 'Archived customer';
+      $('back').href = 'archived.html'; $('back').textContent = 'Back to archived customers';
+      $('bRestore').style.display = 'block';
+    } else {
+      $('bArchive').style.display = 'block';
+    }
+
     var box = $('details');
     function row(label, val) {
       if (!val) return;
@@ -79,6 +101,30 @@
 
     $('newEst').href = 'estimate.html?customer=' + id;
 
+    // ---------- jobs ----------
+    var jobList = [];
+    try {
+      jobList = await vcascade.jobsOfCustomer(ctx.bizRef, id);
+      jobList.sort(function (a, b) {
+        var ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+        var tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+        return tb - ta;
+      });
+      $('noJobs').textContent = jobList.length ? '' : 'No jobs for this customer yet.';
+      jobList.forEach(function (j) {
+        var r = vyro.el('div', 'item');
+        var left = vyro.el('div', 'grow');
+        var top = vyro.el('b'); top.appendChild(vyro.el('span', 'pill ' + cls(j.status), j.status)); top.appendChild(document.createTextNode(j.title || j.estimateNumber || 'Job'));
+        left.appendChild(top);
+        if (j.address) left.appendChild(vyro.el('small', '', j.address));
+        left.addEventListener('click', function () { location.href = 'job.html?id=' + j.id; });
+        r.appendChild(left);
+        r.appendChild(vyro.el('b', '', vutil.fmt(j.contractCents)));
+        $('jobs').appendChild(r);
+      });
+    } catch (e) { $('err').textContent = vyro.friendly(e); }
+
+    // ---------- estimates ----------
     try {
       var es = await ctx.bizRef.collection('estimates').where('customerId', '==', id).get();
       var list = es.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; });
@@ -100,6 +146,24 @@
         $('ests').appendChild(r);
       });
     } catch (e) { $('err').textContent = vyro.friendly(e); }
+
+    // ---------- archive / restore ----------
+    function amsg(t, k) { $('aMsg').textContent = t; $('aMsg').className = 'note ' + (k || ''); }
+    $('bArchive').addEventListener('click', async function () {
+      var active = jobList.filter(function (j) { return vcascade.ACTIVE.indexOf(j.status) > -1; }).length;
+      var q = active
+        ? 'This customer has ' + active + ' active job' + (active === 1 ? '' : 's') + '. Archive them anyway? Starting new work for them restores them automatically.'
+        : 'Move this customer to the archive? You can restore them any time.';
+      if (!confirm(q)) return;
+      this.disabled = true; amsg('Archiving...');
+      try { await vcascade.setArchived(ctx.bizRef, id, true); location.href = 'customers.html'; }
+      catch (e) { amsg(vyro.friendly(e), 'err'); this.disabled = false; }
+    });
+    $('bRestore').addEventListener('click', async function () {
+      this.disabled = true; amsg('Restoring...');
+      try { await vcascade.setArchived(ctx.bizRef, id, false); location.reload(); }
+      catch (e) { amsg(vyro.friendly(e), 'err'); this.disabled = false; }
+    });
   });
 </script>
 </body>
