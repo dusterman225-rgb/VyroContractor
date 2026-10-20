@@ -110,4 +110,72 @@
         }
         if (c.address) {
           var map = vyro.el('a', 'mini', 'Map');
-          map.href = 'https://www.google.com/maps/search/?api=1&query=' +
+          map.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(c.address);
+          map.target = '_blank'; map.rel = 'noopener'; row.appendChild(map);
+        }
+        box.appendChild(row);
+      });
+    }
+
+    async function load() {
+      var snap = await col.orderBy('nameLower').get();
+      all = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; });
+      render();
+    }
+
+    $('q').addEventListener('input', render);
+    $('add').addEventListener('click', function () { showForm(null); });
+    $('cancel').addEventListener('click', showList);
+
+    $('form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var name = $('name').value.trim();
+      var phone = $('phone').value.trim();
+      var email = $('email').value.trim();
+      if (!name) { $('msg').textContent = 'Name is required.'; $('msg').className = 'note err'; return; }
+
+      if (!editingId) {
+        var dupe = all.some(function (c) {
+          return (email && (c.email || '').toLowerCase() === email.toLowerCase()) ||
+                 (cleanPhone(phone) && cleanPhone(c.phone) === cleanPhone(phone));
+        });
+        if (dupe && !confirm('A customer with this phone or email already exists. Add anyway?')) return;
+      }
+
+      var data = {
+        name: name, nameLower: name.toLowerCase(), phone: phone, email: email,
+        address: $('address').value.trim(), language: $('lang').value,
+        notes: $('notes').value.trim(), updatedAt: vyro.stamp()
+      };
+      var btn = $('save'); btn.disabled = true; $('msg').className = 'note'; $('msg').textContent = 'Saving...';
+      try {
+        if (editingId) {
+          await col.doc(editingId).update(data);
+        } else {
+          data.createdAt = vyro.stamp(); data.createdBy = ctx.user.uid;
+          await col.add(data);
+        }
+        await load(); showList();
+      } catch (err) {
+        $('msg').textContent = vyro.friendly(err); $('msg').className = 'note err';
+      }
+      btn.disabled = false;
+    });
+
+    $('del').addEventListener('click', async function () {
+      if (!editingId || !confirm('Delete this customer? This cannot be undone.')) return;
+      try { await col.doc(editingId).delete(); await load(); showList(); }
+      catch (err) { $('msg').textContent = vyro.friendly(err); $('msg').className = 'note err'; }
+    });
+
+    var editId = new URLSearchParams(location.search).get('edit');
+    load().then(function () {
+      if (editId) {
+        var found = all.filter(function (x) { return x.id === editId; })[0];
+        if (found) showForm(found);
+      }
+    });
+  });
+</script>
+</body>
+</html>
