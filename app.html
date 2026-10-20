@@ -39,6 +39,7 @@
     <div class="row"><span>Active jobs</span><b id="nJobs">...</b></div>
     <div class="row"><span>Money owed to you</span><b id="nOwed">...</b></div>
     <div class="row"><span>Overdue invoices</span><b id="nOverdue">...</b></div>
+    <div class="row"><span>Bills you need to pay</span><b id="nBills">...</b></div>
   </div>
 
   <div class="nav">
@@ -46,11 +47,12 @@
     <a class="btn" href="estimates.html">Estimates</a>
     <a class="btn" href="jobs.html">Active jobs</a>
     <a class="btn" href="invoices.html">Invoices</a>
+    <a class="btn" href="expenses.html" style="grid-column:1/-1">Expenses and bills</a>
   </div>
 
   <div class="card">
     <h2>Coming next</h2>
-    <p>Bills and expenses, then automatic emails.</p>
+    <p>Automatic emails, then the customer portal.</p>
   </div>
 
   <div class="note err" id="err"></div>
@@ -127,6 +129,17 @@
       $('nOwed').textContent = vutil.fmt(owed);
       $('nOverdue').textContent = over; if (over) $('nOverdue').className = 'late';
     } catch (e) { $('nOwed').textContent = '-'; $('nOverdue').textContent = '-'; }
+
+    try {
+      var bx = await ctx.bizRef.collection('expenses').where('status', '==', 'Unpaid').get();
+      var bills = 0, billsOver = 0, td = vutil.todayStr();
+      bx.forEach(function (d) {
+        var x = d.data(); bills += x.amountCents || 0;
+        if (x.dueDate && x.dueDate < td) billsOver++;
+      });
+      $('nBills').textContent = vutil.fmt(bills) + (billsOver ? ' (' + billsOver + ' overdue)' : '');
+      if (billsOver) $('nBills').className = 'late';
+    } catch (e) { $('nBills').textContent = '-'; }
   });
 </script>
 </body>
