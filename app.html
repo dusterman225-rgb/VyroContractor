@@ -20,14 +20,15 @@
     <div class="row"><span>New leads</span><b id="nNew">...</b></div>
     <div class="row"><span>Leads waiting 2+ days</span><b id="nStale">...</b></div>
     <div class="row"><span>Follow-ups due</span><b id="nDue">...</b></div>
-    <a class="back" href="leads.html" style="margin-top:12px">Open leads</a>
+    <div class="row"><span>Estimates awaiting reply</span><b id="nSent">...</b></div>
   </div>
 
   <div class="nav">
     <a class="btn" href="leads.html">Leads</a>
+    <a class="btn" href="estimates.html">Estimates</a>
     <a class="btn" href="customers.html">Customers</a>
-    <a class="btn" href="profile.html">Business profile</a>
     <a class="btn" href="team.html">Team</a>
+    <a class="btn" href="profile.html" style="grid-column:1/-1">Business profile</a>
   </div>
 
   <div class="card">
@@ -39,7 +40,7 @@
 
   <div class="card">
     <h2>Coming next</h2>
-    <p>Estimates, invoices, jobs and bills.</p>
+    <p>Invoices, jobs and bills.</p>
   </div>
 
   <button class="btn ghost" id="out" type="button">Sign out</button>
@@ -50,13 +51,10 @@
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 <script src="js/firebase-config.js"></script>
+<script src="js/util.js"></script>
 <script src="js/auth.js"></script>
 <script>
   var $ = function (id) { return document.getElementById(id); };
-  function todayStr() {
-    var d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  }
 
   vyro.start(async function (ctx) {
     $('who').textContent = ctx.biz.name;
@@ -66,7 +64,7 @@
 
     try {
       var snap = await ctx.bizRef.collection('leads').get();
-      var today = todayStr(), now = Date.now(), nNew = 0, nStale = 0, nDue = 0;
+      var today = vutil.todayStr(), now = Date.now(), nNew = 0, nStale = 0, nDue = 0;
       snap.forEach(function (d) {
         var l = d.data();
         if (l.status === 'New') {
@@ -83,6 +81,11 @@
       $('nNew').textContent = $('nStale').textContent = $('nDue').textContent = '-';
       $('err').textContent = 'Could not load leads. Check the Firestore rules were published.';
     }
+
+    try {
+      var es = await ctx.bizRef.collection('estimates').where('status', '==', 'Sent').get();
+      $('nSent').textContent = es.size;
+    } catch (e) { $('nSent').textContent = '-'; }
   });
 
   $('out').addEventListener('click', async function () {
