@@ -53,6 +53,17 @@
     <a class="btn" id="newInv" href="#">New invoice for this job</a>
   </div>
 
+  <div class="card totals">
+    <h2>Costs and profit</h2>
+    <div class="row"><span>Costs (incl. unpaid bills)</span><b id="cAll">-</b></div>
+    <div class="row"><span>Expected profit (contract - costs)</span><b id="cExp">-</b></div>
+    <div class="row"><span>Margin</span><b id="cMargin">-</b></div>
+    <div class="row big"><span>Cash in hand so far (paid - costs paid)</span><b id="cCash">-</b></div>
+    <div id="costList"></div>
+    <div class="note" id="costNone"></div>
+    <a class="btn" id="newCost" href="#">Add expense for this job</a>
+  </div>
+
   <div class="card">
     <h2>Updates</h2>
     <label class="field"><span>Add an update</span><textarea id="uText" rows="2" maxlength="1000" placeholder="e.g. Demo finished, waiting on permit"></textarea></label>
@@ -89,6 +100,7 @@
     var canManage = ctx.role === 'owner' || ctx.role === 'supervisor';
     var who = (ctx.me && ctx.me.name) || ctx.user.email;
     var today = vutil.todayStr();
+    var paidIn = 0;
 
     $('pageTag').textContent = 'Job \u00b7 ' + (job.estimateNumber || '');
     $('jCust').textContent = job.customerName;
@@ -101,6 +113,7 @@
     if (job.customerId) lk('Customer', 'customer.html?id=' + job.customerId);
     $('viewEst').href = 'estimate.html?id=' + (job.estimateId || id);
     $('newInv').href = 'invoice.html?estimate=' + (job.estimateId || id);
+    $('newCost').href = 'expense.html?job=' + id + '&back=job';
 
     $('status').value = job.status;
     $('startDate').value = job.startDate || '';
@@ -155,11 +168,40 @@
         row.appendChild(vyro.el('b', disp === 'Overdue' ? 'late' : '', vutil.fmt(i.totalCents)));
         $('invList').appendChild(row);
       });
+      paidIn = paid;
       $('mContract').textContent = vutil.fmt(job.contractCents);
       $('mBilled').textContent = vutil.fmt(billed);
       $('mPaid').textContent = vutil.fmt(paid);
       $('mOwed').textContent = vutil.fmt(owed); if (owed) $('mOwed').className = 'late';
       $('mLeft').textContent = vutil.fmt(Math.max(0, job.contractCents - billed));
+    } catch (e) { $('err').textContent = vyro.friendly(e); }
+
+    // ---------- costs and profit ----------
+    try {
+      var xs = await ctx.bizRef.collection('expenses').where('jobId', '==', id).get();
+      var xl = xs.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; });
+      xl.sort(function (a, b) { return (a.date || '') < (b.date || '') ? 1 : -1; });
+      var costAll = 0, costPaid = 0;
+      $('costNone').textContent = xl.length ? '' : 'No costs recorded for this job yet.';
+      xl.forEach(function (x) {
+        costAll += x.amountCents || 0;
+        if (x.status === 'Paid') costPaid += x.amountCents || 0;
+        var row = vyro.el('div', 'item');
+        var left = vyro.el('div', 'grow');
+        var top = vyro.el('b'); top.appendChild(vyro.el('span', 'pill ' + x.status, x.status)); top.appendChild(document.createTextNode(x.description));
+        left.appendChild(top);
+        left.appendChild(vyro.el('small', '', [x.vendor, x.category, x.date].filter(Boolean).join(' \u00b7 ')));
+        left.addEventListener('click', function () { location.href = 'expense.html?id=' + x.id + '&back=job'; });
+        row.appendChild(left);
+        row.appendChild(vyro.el('b', '', vutil.fmt(x.amountCents)));
+        $('costList').appendChild(row);
+      });
+      var expected = (job.contractCents || 0) - costAll;
+      $('cAll').textContent = vutil.fmt(costAll);
+      $('cExp').textContent = vutil.fmt(expected); if (expected < 0) $('cExp').className = 'late';
+      $('cMargin').textContent = job.contractCents ? Math.round(expected / job.contractCents * 100) + '%' : '-';
+      var cash = paidIn - costPaid;
+      $('cCash').textContent = vutil.fmt(cash); if (cash < 0) $('cCash').className = 'late';
     } catch (e) { $('err').textContent = vyro.friendly(e); }
 
     // ---------- updates log ----------
