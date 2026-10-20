@@ -20,6 +20,7 @@
           <small id="mProduct"></small>
           <small id="mWho"></small>
         </div>
+        <a class="mi" id="miFin" href="finances.html" style="display:none">Finances</a>
         <a class="mi" href="customers.html">Customers</a>
         <a class="mi" href="team.html">Team</a>
         <a class="mi" href="profile.html">Business profile</a>
@@ -81,6 +82,7 @@
     $('mName').textContent = ctx.biz.name;
     $('mProduct').textContent = PRODUCT_NAMES[ctx.biz.product] || '';
     $('mWho').textContent = ctx.role + ' \u00b7 ' + ctx.user.email;
+      if (ctx.role === 'owner') $('miFin').style.display = 'block';
 
     try {
       var snap = await ctx.bizRef.collection('leads').get();
