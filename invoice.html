@@ -75,13 +75,20 @@
 
     <div class="card">
       <button class="btn" id="save" type="submit">Save invoice</button>
-      <button class="btn ghost" id="bSent" type="button" style="display:none">Mark as sent</button>
+      <button class="btn" id="bEmail" type="button" style="display:none">Send invoice by email</button>
+      <button class="btn ghost" id="bSent" type="button" style="display:none">Mark as sent (hand delivered, etc.)</button>
       <button class="btn ghost" id="bDraft" type="button" style="display:none">Back to draft</button>
       <button class="btn ghost" id="bReopen" type="button" style="display:none">Reopen as draft</button>
       <a class="btn ghost" id="bView" href="#" style="display:none">View, print or email</a>
       <button class="link" id="bVoid" type="button" style="display:none;color:#ff8a8a">Void invoice</button>
       <button class="link" id="bDel" type="button" style="display:none;color:#ff8a8a">Delete invoice</button>
       <div class="note" id="msg"></div>
+    </div>
+    <div class="card" id="sentAsk" style="display:none">
+      <h2>Did the email go out?</h2>
+      <p>Your mail app can't tell us whether you pressed Send. If it went out, tap Yes and the invoice becomes Sent.</p>
+      <button class="btn" id="askYes" type="button">Yes, mark as sent</button>
+      <button class="btn ghost" id="askNo" type="button">Not yet</button>
     </div>
   </form>
 
@@ -318,6 +325,7 @@
     if (inv) {
       $('bView').style.display = 'block'; $('bView').href = 'invoice-view.html?id=' + inv.id;
       if (status === 'Draft') $('bSent').style.display = 'block';
+      if (status === 'Draft' || status === 'Sent' || status === 'Partially Paid') $('bEmail').style.display = 'block';
       if (status === 'Sent' && paidSoFar === 0) { $('bDraft').style.display = 'block'; $('bVoid').style.display = 'block'; }
       if (status === 'Voided' && paidSoFar === 0) $('bReopen').style.display = 'block';
       if (status === 'Draft') $('bVoid').style.display = 'block';
@@ -375,6 +383,23 @@
     }
 
     $('form').addEventListener('submit', function (e) { e.preventDefault(); save(null); });
+    $('bEmail').addEventListener('click', function () {
+      var t = calc(), items = getItems();
+      if (!items.length || t.totalCents <= 0) { say('Add at least one line item with a price first.', 'err'); return; }
+      if (!$('dueDate').value) { say('Choose a due date first.', 'err'); return; }
+      var to = $('cemail').value.trim();
+      if (!to) say('This customer has no email on file. Add one on their customer page, or type it in your mail app.', 'err');
+      else say('');
+      var bal = t.totalCents - (inv ? inv.paidCents : 0);
+      var subject = 'Invoice ' + inv.number + ' from ' + ctx.biz.name;
+      var body = 'Hi ' + $('cname').value.trim() + ',\n\nHere is invoice ' + inv.number +
+        ($('title').value.trim() ? ' for ' + $('title').value.trim() : '') + '. The amount due is ' + vutil.fmt(bal) +
+        ', due ' + $('dueDate').value + '.\n\nPlease let me know if you have any questions.\n\nThank you,\n' + ctx.biz.name;
+      window.location.href = 'mailto:' + to + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+      if (status === 'Draft') $('sentAsk').style.display = 'block';
+    });
+    $('askYes').addEventListener('click', function () { save('Sent'); });
+    $('askNo').addEventListener('click', function () { $('sentAsk').style.display = 'none'; });
     $('bSent').addEventListener('click', function () { save('Sent'); });
     $('bDraft').addEventListener('click', function () { save('Draft'); });
     $('bReopen').addEventListener('click', function () { save('Draft'); });
