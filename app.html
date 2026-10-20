@@ -10,10 +10,25 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="brand">
+  <div class="topbar">
     <img class="mark-small" src="images/logo.svg" alt="Vyro">
-    <div class="tag" id="who">Loading...</div>
+    <div>
+      <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="menu">Menu &#9662;</button>
+      <div class="menu" id="menu">
+        <div class="mh">
+          <b id="mName">Loading...</b>
+          <small id="mProduct"></small>
+          <small id="mWho"></small>
+        </div>
+        <a class="mi" href="customers.html">Customers</a>
+        <a class="mi" href="team.html">Team</a>
+        <a class="mi" href="profile.html">Business profile</a>
+        <button class="mi out" id="out" type="button">Sign out</button>
+      </div>
+    </div>
   </div>
+
+  <div class="tag" style="margin:22px 0 0">Dashboard</div>
 
   <div class="card">
     <h2>Needs your attention</h2>
@@ -26,16 +41,6 @@
   <div class="nav">
     <a class="btn" href="leads.html">Leads</a>
     <a class="btn" href="estimates.html">Estimates</a>
-    <a class="btn" href="customers.html">Customers</a>
-    <a class="btn" href="team.html">Team</a>
-    <a class="btn" href="profile.html" style="grid-column:1/-1">Business profile</a>
-  </div>
-
-  <div class="card">
-    <h2>Your business</h2>
-    <div class="row"><span>Name</span><b id="bizName">...</b></div>
-    <div class="row"><span>Your role</span><b id="role">...</b></div>
-    <div class="row"><span>Email</span><b id="mail">...</b></div>
   </div>
 
   <div class="card">
@@ -43,7 +48,6 @@
     <p>Invoices, jobs and bills.</p>
   </div>
 
-  <button class="btn ghost" id="out" type="button">Sign out</button>
   <div class="note err" id="err"></div>
 </div>
 
@@ -55,12 +59,22 @@
 <script src="js/auth.js"></script>
 <script>
   var $ = function (id) { return document.getElementById(id); };
+  var PRODUCT_NAMES = { contractor: 'VyroContractor', restaurant: 'VyroRestaurant', retail: 'VyroRetail' };
+
+  // menu open/close
+  function setMenu(open) {
+    $('menu').classList.toggle('open', open);
+    $('menuBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  $('menuBtn').addEventListener('click', function (e) { e.stopPropagation(); setMenu(!$('menu').classList.contains('open')); });
+  document.addEventListener('click', function (e) { if (!$('menu').contains(e.target)) setMenu(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setMenu(false); });
+  $('out').addEventListener('click', async function () { await vyro.signOut(); location.href = 'login.html'; });
 
   vyro.start(async function (ctx) {
-    $('who').textContent = ctx.biz.name;
-    $('bizName').textContent = ctx.biz.name;
-    $('role').textContent = ctx.role;
-    $('mail').textContent = ctx.user.email;
+    $('mName').textContent = ctx.biz.name;
+    $('mProduct').textContent = PRODUCT_NAMES[ctx.biz.product] || '';
+    $('mWho').textContent = ctx.role + ' \u00b7 ' + ctx.user.email;
 
     try {
       var snap = await ctx.bizRef.collection('leads').get();
@@ -86,10 +100,6 @@
       var es = await ctx.bizRef.collection('estimates').where('status', '==', 'Sent').get();
       $('nSent').textContent = es.size;
     } catch (e) { $('nSent').textContent = '-'; }
-  });
-
-  $('out').addEventListener('click', async function () {
-    await vyro.signOut(); location.href = 'login.html';
   });
 </script>
 </body>
