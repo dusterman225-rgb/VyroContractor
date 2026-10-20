@@ -36,16 +36,19 @@
     <div class="row"><span>Leads waiting 2+ days</span><b id="nStale">...</b></div>
     <div class="row"><span>Follow-ups due</span><b id="nDue">...</b></div>
     <div class="row"><span>Estimates awaiting reply</span><b id="nSent">...</b></div>
+    <div class="row"><span>Money owed to you</span><b id="nOwed">...</b></div>
+    <div class="row"><span>Overdue invoices</span><b id="nOverdue">...</b></div>
   </div>
 
   <div class="nav">
     <a class="btn" href="leads.html">Leads</a>
     <a class="btn" href="estimates.html">Estimates</a>
+    <a class="btn" href="invoices.html" style="grid-column:1/-1">Invoices</a>
   </div>
 
   <div class="card">
     <h2>Coming next</h2>
-    <p>Invoices, jobs and bills.</p>
+    <p>Jobs and bills.</p>
   </div>
 
   <div class="note err" id="err"></div>
@@ -61,7 +64,6 @@
   var $ = function (id) { return document.getElementById(id); };
   var PRODUCT_NAMES = { contractor: 'VyroContractor', restaurant: 'VyroRestaurant', retail: 'VyroRetail' };
 
-  // menu open/close
   function setMenu(open) {
     $('menu').classList.toggle('open', open);
     $('menuBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -100,6 +102,20 @@
       var es = await ctx.bizRef.collection('estimates').where('status', '==', 'Sent').get();
       $('nSent').textContent = es.size;
     } catch (e) { $('nSent').textContent = '-'; }
+
+    try {
+      var inv = await ctx.bizRef.collection('invoices').get();
+      var owed = 0, over = 0, tday = vutil.todayStr();
+      inv.forEach(function (d) {
+        var i = d.data();
+        if (i.status === 'Sent' || i.status === 'Partially Paid') {
+          owed += (i.totalCents || 0) - (i.paidCents || 0);
+          if (i.dueDate && i.dueDate < tday) over++;
+        }
+      });
+      $('nOwed').textContent = vutil.fmt(owed);
+      $('nOverdue').textContent = over; if (over) $('nOverdue').className = 'late';
+    } catch (e) { $('nOwed').textContent = '-'; $('nOverdue').textContent = '-'; }
   });
 </script>
 </body>
