@@ -22,6 +22,7 @@
       <div class="note" id="empty"></div>
     </div>
     <button class="btn" id="add" type="button">Add customer</button>
+    <a class="btn ghost" id="viewArch" href="archived.html">View archived customers</a>
     <a class="back" href="app.html">Back to dashboard</a>
   </div>
 
@@ -47,6 +48,7 @@
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/cascade.js"></script>
 <script>
   var LANGS = [['en','English'],['es','Spanish'],['pt','Portuguese'],['fr','French'],['zh','Chinese'],
                ['vi','Vietnamese'],['tl','Tagalog'],['ar','Arabic'],['ru','Russian'],['ko','Korean'],['other','Other']];
@@ -86,14 +88,17 @@
     function render() {
       var q = $('q').value.trim().toLowerCase();
       var box = $('list'); box.textContent = '';
-      var shown = all.filter(function (c) {
+      var active = all.filter(function (c) { return !c.archived; });
+      var nArch = all.length - active.length;
+      $('viewArch').textContent = 'View archived customers' + (nArch ? ' (' + nArch + ')' : '');
+      var shown = active.filter(function (c) {
         if (!q) return true;
         return (c.name || '').toLowerCase().indexOf(q) > -1 ||
                (c.email || '').toLowerCase().indexOf(q) > -1 ||
                cleanPhone(c.phone).indexOf(cleanPhone(q) || '\u0000') > -1;
       });
       $('empty').textContent = shown.length ? '' :
-        (all.length ? 'No customers match your search.' : 'No customers yet. Tap Add customer to start.');
+        (active.length ? 'No customers match your search.' : 'No customers yet. Tap Add customer to start.');
       shown.forEach(function (c) {
         var row = vyro.el('div', 'item');
         var left = vyro.el('div', 'grow');
@@ -139,7 +144,7 @@
           return (email && (c.email || '').toLowerCase() === email.toLowerCase()) ||
                  (cleanPhone(phone) && cleanPhone(c.phone) === cleanPhone(phone));
         });
-        if (dupe && !confirm('A customer with this phone or email already exists. Add anyway?')) return;
+        if (dupe && !confirm('A customer with this phone or email already exists (they may be in your archive). Add anyway?')) return;
       }
 
       var data = {
@@ -152,7 +157,7 @@
         if (editingId) {
           await col.doc(editingId).update(data);
         } else {
-          data.createdAt = vyro.stamp(); data.createdBy = ctx.user.uid;
+          data.createdAt = vyro.stamp(); data.createdBy = ctx.user.uid; data.archived = false;
           await col.add(data);
         }
         await load(); showList();
@@ -163,9 +168,18 @@
     });
 
     $('del').addEventListener('click', async function () {
-      if (!editingId || !confirm('Delete this customer? This cannot be undone.')) return;
-      try { await col.doc(editingId).delete(); await load(); showList(); }
-      catch (err) { $('msg').textContent = vyro.friendly(err); $('msg').className = 'note err'; }
+      if (!editingId) return;
+      var btn = this; btn.disabled = true;
+      try {
+        var jobs = await vcascade.jobsOfCustomer(ctx.bizRef, editingId);
+        var msg = jobs.length
+          ? 'Delete this customer AND their ' + jobs.length + (jobs.length === 1 ? ' job' : ' jobs') + '? Their estimates and invoices are kept for your records. This cannot be undone.'
+          : 'Delete this customer? This cannot be undone.';
+        if (!confirm(msg)) { btn.disabled = false; return; }
+        await vcascade.deleteCustomer(ctx.bizRef, editingId);
+        await load(); showList();
+      } catch (err) { $('msg').textContent = vyro.friendly(err); $('msg').className = 'note err'; }
+      btn.disabled = false;
     });
 
     var editId = new URLSearchParams(location.search).get('edit');
