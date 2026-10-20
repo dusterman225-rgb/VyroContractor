@@ -65,6 +65,7 @@
       <button class="btn ghost" id="bReject" type="button" style="display:none">Mark as rejected</button>
       <button class="btn ghost" id="bReopen" type="button" style="display:none">Reopen as draft</button>
       <a class="btn ghost" id="bView" href="#" style="display:none">View, print or email</a>
+            <a class="btn ghost" id="bInvoice" href="#" style="display:none">Create invoice from this estimate</a>
       <button class="link" id="bVoid" type="button" style="display:none;color:#ff8a8a">Void estimate</button>
       <button class="link" id="bDel" type="button" style="display:none;color:#ff8a8a">Delete estimate</button>
       <div class="note" id="msg"></div>
@@ -249,6 +250,7 @@
       if (status !== 'Voided') $('bVoid').style.display = 'block';
       if (canDelete) $('bDel').style.display = 'block';
     }
+    if (status === 'Approved') { $('bInvoice').style.display = 'block'; $('bInvoice').href = 'invoice.html?estimate=' + est.id; }
     if (status === 'Draft') $('bSent').style.display = 'block';
     if (status === 'Draft' || status === 'Sent') $('bApprove').style.display = 'block';
     if (status === 'Sent') $('bReject').style.display = 'block';
