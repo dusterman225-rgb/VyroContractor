@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#05070A">
+<title>Customer - Vyro Business</title>
+<link rel="icon" href="images/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <a href="app.html"><img class="mark-small" src="images/logo.svg" alt="Back to dashboard"></a>
+    <div class="tag">Customer</div>
+  </div>
+
+  <div class="card">
+    <h2 id="cName">Loading...</h2>
+    <div id="details"></div>
+    <div class="nav" id="actions"></div>
+  </div>
+
+  <div class="card">
+    <h2>Estimates</h2>
+    <div id="ests"></div>
+    <div class="note" id="none"></div>
+    <a class="btn" id="newEst" href="#">New estimate</a>
+  </div>
+
+  <a class="back" href="customers.html">Back to customers</a>
+  <div class="note err" id="err"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/util.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var LANG = { en: 'English', es: 'Spanish', pt: 'Portuguese', fr: 'French', zh: 'Chinese', vi: 'Vietnamese',
+               tl: 'Tagalog', ar: 'Arabic', ru: 'Russian', ko: 'Korean', other: 'Other' };
+  function cleanPhone(p) { return (p || '').replace(/[^0-9+]/g, ''); }
+
+  vyro.start(async function (ctx) {
+    var id = new URLSearchParams(location.search).get('id');
+    var s = await ctx.bizRef.collection('customers').doc(id || 'x').get();
+    if (!s.exists) { $('err').textContent = 'Customer not found.'; $('cName').textContent = 'Not found'; return; }
+    var c = s.data();
+
+    $('cName').textContent = c.name;
+    var box = $('details');
+    function row(label, val) {
+      if (!val) return;
+      var r = vyro.el('div', 'row'); r.appendChild(vyro.el('span', '', label)); r.appendChild(vyro.el('b', '', val)); box.appendChild(r);
+    }
+    row('Phone', c.phone); row('Email', c.email); row('Address', c.address);
+    row('Language', LANG[c.language] || '');
+    if (c.notes) {
+      var n = vyro.el('div', 'row'); n.style.display = 'block';
+      n.appendChild(vyro.el('span', '', 'Notes'));
+      var nb = vyro.el('div', '', c.notes); nb.style.cssText = 'white-space:pre-wrap;color:#fff;margin-top:6px'; n.appendChild(nb);
+      box.appendChild(n);
+    }
+    if (!box.children.length) box.appendChild(vyro.el('p', '', 'No contact details saved yet.'));
+
+    var act = $('actions');
+    function link(label, href, newTab) {
+      var a = vyro.el('a', 'btn ghost', label); a.href = href;
+      if (newTab) { a.target = '_blank'; a.rel = 'noopener'; }
+      act.appendChild(a);
+    }
+    if (cleanPhone(c.phone)) link('Call', 'tel:' + cleanPhone(c.phone));
+    if (c.email) link('Email', 'mailto:' + encodeURIComponent(c.email).replace('%40', '@'));
+    if (c.address) link('Map', 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(c.address), true);
+    link('Edit', 'customers.html?edit=' + id);
+
+    $('newEst').href = 'estimate.html?customer=' + id;
+
+    try {
+      var es = await ctx.bizRef.collection('estimates').where('customerId', '==', id).get();
+      var list = es.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; });
+      list.sort(function (a, b) {
+        var ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+        var tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+        return tb - ta;
+      });
+      $('none').textContent = list.length ? '' : 'No estimates for this customer yet.';
+      list.forEach(function (e) {
+        var r = vyro.el('div', 'item');
+        var left = vyro.el('div', 'grow');
+        var top = vyro.el('b'); top.appendChild(vyro.el('span', 'pill ' + e.status, e.status)); top.appendChild(document.createTextNode(e.number || ''));
+        left.appendChild(top);
+        if (e.title) left.appendChild(vyro.el('small', '', e.title));
+        left.addEventListener('click', function () { location.href = 'estimate.html?id=' + e.id; });
+        r.appendChild(left);
+        r.appendChild(vyro.el('b', '', vutil.fmt(e.totalCents)));
+        $('ests').appendChild(r);
+      });
+    } catch (e) { $('err').textContent = vyro.friendly(e); }
+  });
+</script>
+</body>
+</html>
