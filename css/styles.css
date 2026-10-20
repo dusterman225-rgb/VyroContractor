@@ -146,3 +146,5 @@ a.choice:hover{border-color:var(--blue);box-shadow:0 0 18px var(--blue-glow)}
 .pill.OnHold{border-color:#f0c36d;color:#f0c36d}
 .pill.Completed{border-color:#7fe3b0;color:#7fe3b0}
 .pill.Cancelled{border-color:rgba(255,138,138,.5);color:#ff8a8a}
+
+.pill.Unpaid{border-color:#f0c36d;color:#f0c36d}
