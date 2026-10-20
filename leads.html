@@ -45,6 +45,7 @@
     <label class="field"><span>Notes</span><textarea id="notes" rows="3" maxlength="1000"></textarea></label>
     <button class="btn" id="save" type="submit">Save lead</button>
     <button class="btn ghost" id="toCustomer" type="button" style="display:none">Create customer from this lead</button>
+        <a class="btn ghost" id="toEstimate" href="#" style="display:none">Create estimate for this lead</a>
     <button class="btn ghost" id="cancel" type="button">Cancel</button>
     <button class="link" id="del" type="button" style="display:none;color:#ff8a8a">Delete lead</button>
     <div class="note" id="msg"></div>
@@ -92,6 +93,8 @@
       $('notes').value = l ? (l.notes || '') : '';
       $('del').style.display = (l && canDelete) ? 'block' : 'none';
       $('toCustomer').style.display = (l && !l.customerId) ? 'block' : 'none';
+            $('toEstimate').style.display = l ? 'block' : 'none';
+      if (l) { $('toEstimate').href = 'estimate.html?lead=' + l.id; }
       $('msg').textContent = l && l.customerId ? 'This lead already has a customer record.' : '';
       $('msg').className = 'note';
       $('listView').style.display = 'none'; $('form').style.display = 'block';
