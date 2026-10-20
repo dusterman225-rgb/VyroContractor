@@ -20,10 +20,11 @@
   <form id="form" autocomplete="off">
     <div class="card">
       <h2>Customer</h2>
-      <label class="field"><span>Choose existing customer (optional)</span><select id="cust"><option value="">-</option></select></label>
-      <label class="field"><span>Name</span><input id="cname" type="text" maxlength="120" required></label>
-      <label class="field"><span>Email</span><input id="cemail" type="email" maxlength="120"></label>
-      <label class="field"><span>Phone</span><input id="cphone" type="tel" maxlength="40"></label>
+      <label class="field"><span>Customer</span><select id="cust"><option value="">Choose a customer...</option></select></label>
+      <label class="field" id="nameRow"><span>Name (no customer record yet)</span><input id="cname" type="text" maxlength="120"></label>
+      <input id="cemail" type="hidden">
+      <input id="cphone" type="hidden">
+      <a class="link" id="viewCust" href="#" style="display:none">View customer page</a>
       <label class="field"><span>Job address</span><textarea id="caddr" rows="2" maxlength="300"></textarea></label>
     </div>
 
@@ -168,10 +169,24 @@
       });
     } catch (e) { /* optional */ }
 
-    $('cust').addEventListener('change', function () {
-      var c = customers[this.value]; if (!c) return;
-      $('cname').value = c.name; $('cemail').value = c.email || ''; $('cphone').value = c.phone || ''; $('caddr').value = c.address || '';
-    });
+    // show the name box only when there is no customer record; link to the customer page otherwise
+    function syncCustomerUi() {
+      var cid = $('cust').value;
+      $('nameRow').style.display = cid ? 'none' : 'block';
+      $('viewCust').style.display = cid ? 'block' : 'none';
+      if (cid) $('viewCust').href = 'customer.html?id=' + cid;
+    }
+    function pickCustomer() {
+      var cid = $('cust').value, c = customers[cid];
+      if (c) {
+        $('cname').value = c.name; $('cemail').value = c.email || ''; $('cphone').value = c.phone || '';
+        $('caddr').value = c.address || '';
+      } else {
+        $('cemail').value = ''; $('cphone').value = '';
+      }
+      syncCustomerUi();
+    }
+    $('cust').addEventListener('change', pickCustomer);
 
     // ---------- load ----------
     function fill(e) {
@@ -185,6 +200,7 @@
       $('discount').value = e.discountCents ? (e.discountCents / 100).toFixed(2) : '';
       $('taxPct').value = e.taxPct || ''; $('depositPct').value = e.depositPct || '';
       $('terms').value = e.terms || ''; $('internalNotes').value = e.internalNotes || '';
+      syncCustomerUi();
     }
 
     if (id) {
@@ -197,17 +213,21 @@
       var d = new Date(); d.setDate(d.getDate() + 30);
       $('validUntil').value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
       addRow();
-      if (leadId) {
+      var custParam = params.get('customer');
+      if (custParam && customers[custParam]) {
+        $('cust').value = custParam; pickCustomer();
+      } else if (leadId) {
         try {
           var ls = await ctx.bizRef.collection('leads').doc(leadId).get();
           if (ls.exists) {
             var l = ls.data();
             $('cname').value = l.name || ''; $('cemail').value = l.email || ''; $('cphone').value = l.phone || '';
             $('caddr').value = l.address || ''; $('title').value = (l.jobDetails || '').slice(0, 80);
-            if (l.customerId) $('cust').value = l.customerId;
+            if (l.customerId && customers[l.customerId]) $('cust').value = l.customerId;
           }
         } catch (e) { /* ignore */ }
       }
+      syncCustomerUi();
     }
     recalc();
 
@@ -237,7 +257,7 @@
     // ---------- save ----------
     async function save(newStatus) {
       var name = $('cname').value.trim();
-      if (!name) { say('Customer name is required.', 'err'); return; }
+      if (!name) { say('Choose a customer, or type a name.', 'err'); return; }
       var items = getItems(), t = calc();
       var st = newStatus || status;
       if ((st === 'Sent' || st === 'Approved') && (!items.length || t.totalCents <= 0)) {
