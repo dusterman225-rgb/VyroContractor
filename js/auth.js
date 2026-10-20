@@ -28,7 +28,7 @@
     return n;
   }
 
-  async function signUp(email, password, businessName) {
+  async function signUp(email, password, businessName, product) {
     busy = true;
     try {
       var cred = await auth.createUserWithEmailAndPassword(email, password);
@@ -36,7 +36,7 @@
         var uid = cred.user.uid;
         var bizRef = db.collection('businesses').doc();
         var batch = db.batch();
-        batch.set(bizRef, { name: businessName, ownerUid: uid, product: 'contractor', createdAt: stamp() });
+        batch.set(bizRef, { name: businessName, ownerUid: uid, product: product || 'contractor', createdAt: stamp() });
         batch.set(bizRef.collection('members').doc(uid), { role: 'owner', email: email, createdAt: stamp() });
         batch.set(db.collection('users').doc(uid), { email: email, bizId: bizRef.id, createdAt: stamp() });
         await batch.commit();
