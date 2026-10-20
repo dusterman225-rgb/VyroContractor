@@ -105,7 +105,7 @@
       var es = await ctx.bizRef.collection('estimates').where('status', '==', 'Approved').get();
       var batch = vyro.db.batch(), added = 0;
       es.forEach(function (d) {
-        if (have[d.id]) return;
+                if (have[d.id] || d.data().jobDismissed) return;
         var e = d.data();
         var jd = {
           estimateId: d.id, estimateNumber: e.number || '', customerId: e.customerId || '', customerName: e.customerName || '',
