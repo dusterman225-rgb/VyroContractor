@@ -319,7 +319,8 @@
         if (st === 'Approved' && status !== 'Approved') {
           try {
             var jref = ctx.bizRef.collection('jobs').doc(savedId);
-            var jsnap = await jref.get();
+                        var jsnap = await jref.get();
+            if (data.customerId) { try { await ctx.bizRef.collection('customers').doc(data.customerId).update({ archived: false, archivedAt: null }); } catch (e2) { /* optional */ } }
             if (!jsnap.exists) {
               await jref.set({
                 estimateId: savedId, estimateNumber: est ? est.number : data.number,
