@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#05070A">
+<title>Job - Vyro Business</title>
+<link rel="icon" href="images/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <a href="app.html"><img class="mark-small" src="images/logo.svg" alt="Back to dashboard"></a>
+    <div class="tag" id="pageTag">Job</div>
+  </div>
+
+  <div class="card">
+    <h2 id="jCust">Loading...</h2>
+    <p id="jTitle"></p>
+    <p id="jAddr"></p>
+    <div class="nav" id="jLinks"></div>
+  </div>
+
+  <div class="card">
+    <h2>Progress</h2>
+    <label class="field"><span>Status</span>
+      <select id="status">
+        <option>Not Started</option><option>In Progress</option><option>On Hold</option>
+        <option>Completed</option><option>Cancelled</option>
+      </select>
+    </label>
+    <label class="field"><span>Start date</span><input id="startDate" type="date"></label>
+    <label class="field"><span>Target finish date</span><input id="targetEndDate" type="date"></label>
+    <label class="field"><span>Internal notes (not shown to customer)</span><textarea id="internalNotes" rows="3" maxlength="2000"></textarea></label>
+    <button class="btn" id="saveJob" type="button">Save progress</button>
+    <div class="note" id="jMsg"></div>
+  </div>
+
+  <div class="card totals">
+    <h2>Money</h2>
+    <div class="row"><span>Contract total</span><b id="mContract">-</b></div>
+    <div class="row"><span>Invoiced (incl. drafts)</span><b id="mBilled">-</b></div>
+    <div class="row"><span>Paid</span><b id="mPaid">-</b></div>
+    <div class="row"><span>Still owed (sent invoices)</span><b id="mOwed">-</b></div>
+    <div class="row big"><span>Left to invoice</span><b id="mLeft">-</b></div>
+  </div>
+
+  <div class="card">
+    <h2>Invoices</h2>
+    <div id="invList"></div>
+    <div class="note" id="invNone"></div>
+    <a class="btn" id="newInv" href="#">New invoice for this job</a>
+  </div>
+
+  <div class="card">
+    <h2>Updates</h2>
+    <label class="field"><span>Add an update</span><textarea id="uText" rows="2" maxlength="1000" placeholder="e.g. Demo finished, waiting on permit"></textarea></label>
+    <button class="btn ghost" id="uAdd" type="button">Add update</button>
+    <div id="uList"></div>
+    <div class="note" id="uMsg"></div>
+  </div>
+
+  <div class="card">
+    <a class="link" id="viewEst" href="#">View the original estimate</a>
+    <button class="link" id="bDel" type="button" style="display:none;color:#ff8a8a">Delete job</button>
+  </div>
+
+  <a class="back" href="jobs.html">Back to jobs</a>
+  <div class="note err" id="err"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/util.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  function cls(s) { return s.replace(/ /g, ''); }
+
+  vyro.start(async function (ctx) {
+    var id = new URLSearchParams(location.search).get('id');
+    var jref = ctx.bizRef.collection('jobs').doc(id || 'x');
+    var s = await jref.get();
+    if (!s.exists) { $('err').textContent = 'Job not found.'; return; }
+    var job = s.data(); job.id = id;
+    var canManage = ctx.role === 'owner' || ctx.role === 'supervisor';
+    var who = (ctx.me && ctx.me.name) || ctx.user.email;
+    var today = vutil.todayStr();
+
+    $('pageTag').textContent = 'Job \u00b7 ' + (job.estimateNumber || '');
+    $('jCust').textContent = job.customerName;
+    $('jTitle').textContent = job.title || '';
+    $('jAddr').textContent = job.address || '';
+    var links = $('jLinks');
+    function lk(text, href) { var a = vyro.el('a', 'btn ghost', text); a.href = href; links.appendChild(a); }
+    if (job.customerPhone) lk('Call', 'tel:' + job.customerPhone);
+    if (job.address) lk('Map', 'https://maps.google.com/?q=' + encodeURIComponent(job.address));
+    if (job.customerId) lk('Customer', 'customer.html?id=' + job.customerId);
+    $('viewEst').href = 'estimate.html?id=' + (job.estimateId || id);
+    $('newInv').href = 'invoice.html?estimate=' + (job.estimateId || id);
+
+    $('status').value = job.status;
+    $('startDate').value = job.startDate || '';
+    $('targetEndDate').value = job.targetEndDate || '';
+    $('internalNotes').value = job.internalNotes || '';
+    if (canManage) $('bDel').style.display = 'block';
+
+    function jmsg(t, c) { $('jMsg').textContent = t; $('jMsg').className = 'note ' + (c || ''); }
+    function umsg(t, c) { $('uMsg').textContent = t; $('uMsg').className = 'note ' + (c || ''); }
+
+    // ---------- save progress ----------
+    $('saveJob').addEventListener('click', async function () {
+      var btn = this, st = $('status').value;
+      btn.disabled = true; jmsg('Saving...');
+      try {
+        var data = {
+          status: st, startDate: $('startDate').value, targetEndDate: $('targetEndDate').value,
+          internalNotes: $('internalNotes').value.trim(), updatedAt: vyro.stamp()
+        };
+        if (st === 'Completed' && job.status !== 'Completed') data.completedAt = vyro.stamp();
+        var batch = vyro.db.batch();
+        batch.update(jref, data);
+        if (st !== job.status) {
+          batch.set(jref.collection('updates').doc(), { text: 'Status changed to ' + st, by: who, kind: 'status', createdAt: vyro.stamp() });
+        }
+        await batch.commit();
+        location.reload();
+      } catch (e) { jmsg(vyro.friendly(e), 'err'); btn.disabled = false; }
+    });
+
+    // ---------- invoices and money ----------
+    try {
+      var is = await ctx.bizRef.collection('invoices').where('estimateId', '==', id).get();
+      var invs = is.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; });
+      invs.sort(function (a, b) { return (a.number || '') < (b.number || '') ? -1 : 1; });
+      var billed = 0, paid = 0, owed = 0;
+      $('invNone').textContent = invs.length ? '' : 'No invoices yet for this job.';
+      invs.forEach(function (i) {
+        var disp = i.status;
+        if ((i.status === 'Sent' || i.status === 'Partially Paid') && i.dueDate && i.dueDate < today) disp = 'Overdue';
+        if (i.status !== 'Voided') {
+          billed += i.totalCents || 0; paid += i.paidCents || 0;
+          if (i.status === 'Sent' || i.status === 'Partially Paid') owed += (i.totalCents || 0) - (i.paidCents || 0);
+        }
+        var row = vyro.el('div', 'item');
+        var left = vyro.el('div', 'grow');
+        var top = vyro.el('b'); top.appendChild(vyro.el('span', 'pill ' + cls(disp), disp)); top.appendChild(document.createTextNode(i.number || ''));
+        left.appendChild(top);
+        left.appendChild(vyro.el('small', '', (i.billingType ? i.billingType + ' \u00b7 ' : '') + 'paid ' + vutil.fmt(i.paidCents || 0)));
+        left.addEventListener('click', function () { location.href = 'invoice.html?id=' + i.id; });
+        row.appendChild(left);
+        row.appendChild(vyro.el('b', disp === 'Overdue' ? 'late' : '', vutil.fmt(i.totalCents)));
+        $('invList').appendChild(row);
+      });
+      $('mContract').textContent = vutil.fmt(job.contractCents);
+      $('mBilled').textContent = vutil.fmt(billed);
+      $('mPaid').textContent = vutil.fmt(paid);
+      $('mOwed').textContent = vutil.fmt(owed); if (owed) $('mOwed').className = 'late';
+      $('mLeft').textContent = vutil.fmt(Math.max(0, job.contractCents - billed));
+    } catch (e) { $('err').textContent = vyro.friendly(e); }
+
+    // ---------- updates log ----------
+    async function loadUpdates() {
+      $('uList').textContent = '';
+      try {
+        var us = await jref.collection('updates').orderBy('createdAt', 'desc').get();
+        us.forEach(function (d) {
+          var u = d.data();
+          var when = u.createdAt && u.createdAt.toDate ? u.createdAt.toDate().toLocaleDateString() : '';
+          var row = vyro.el('div', 'item');
+          var left = vyro.el('div', 'grow');
+          left.appendChild(vyro.el('b', '', u.text));
+          left.appendChild(vyro.el('small', '', when + ' \u00b7 ' + (u.by || '')));
+          row.appendChild(left);
+          $('uList').appendChild(row);
+        });
+      } catch (e) { umsg(vyro.friendly(e), 'err'); }
+    }
+    loadUpdates();
+    $('uAdd').addEventListener('click', async function () {
+      var t = $('uText').value.trim();
+      if (!t) { umsg('Type an update first.', 'err'); return; }
+      this.disabled = true;
+      try {
+        await jref.collection('updates').add({ text: t, by: who, kind: 'note', createdAt: vyro.stamp() });
+        $('uText').value = ''; umsg(''); this.disabled = false; loadUpdates();
+      } catch (e) { umsg(vyro.friendly(e), 'err'); this.disabled = false; }
+    });
+
+    $('bDel').addEventListener('click', async function () {
+      if (!confirm('Delete this job? The estimate and invoices are kept. (It will come back if you reopen the jobs list while the estimate is still Approved.)')) return;
+      try { await jref.delete(); location.href = 'jobs.html'; } catch (e) { jmsg(vyro.friendly(e), 'err'); }
+    });
+  });
+</script>
+</body>
+</html>
