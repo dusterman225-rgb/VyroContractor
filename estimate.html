@@ -307,6 +307,35 @@
             }
           } catch (e) { /* estimate is saved; lead update is optional */ }
         }
+                // approving starts a job; voiding an approved estimate cancels its job
+        if (st === 'Approved' && status !== 'Approved') {
+          try {
+            var jref = ctx.bizRef.collection('jobs').doc(savedId);
+            var jsnap = await jref.get();
+            if (!jsnap.exists) {
+              await jref.set({
+                estimateId: savedId, estimateNumber: est ? est.number : data.number,
+                customerId: data.customerId, customerName: data.customerName, customerEmail: data.customerEmail,
+                customerPhone: data.customerPhone, address: data.address, title: data.title,
+                contractCents: data.totalCents, depositPct: data.depositPct, status: 'Not Started',
+                startDate: '', targetEndDate: '', internalNotes: '',
+                createdAt: vyro.stamp(), createdBy: ctx.user.uid, updatedAt: vyro.stamp()
+              });
+            } else if (jsnap.data().status === 'Cancelled') {
+              await jref.update({ status: 'Not Started', updatedAt: vyro.stamp() });
+            }
+            if (leadId) {
+              var l2 = ctx.bizRef.collection('leads').doc(leadId), l2s = await l2.get();
+              if (l2s.exists && ['New', 'Contacted', 'Estimate Sent'].indexOf(l2s.data().status) > -1) {
+                await l2.update({ status: 'Won', statusChangedAt: vyro.stamp(), updatedAt: vyro.stamp() });
+              }
+            }
+          } catch (e) { /* estimate is saved; the Jobs page will create a missing job */ }
+          location.replace('job.html?id=' + savedId); return;
+        }
+        if (st === 'Voided' && status === 'Approved') {
+          try { await ctx.bizRef.collection('jobs').doc(savedId).update({ status: 'Cancelled', updatedAt: vyro.stamp() }); } catch (e) { /* no job */ }
+        }
         location.replace('estimate.html?id=' + savedId);
       } catch (err) {
         say(vyro.friendly(err), 'err');
