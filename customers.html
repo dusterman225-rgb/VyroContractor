@@ -103,8 +103,7 @@
         if (c.email) bits.push(c.email);
         if (c.language && c.language !== 'en') bits.push(langName(c.language));
         left.appendChild(vyro.el('small', '', bits.join(' · ') || 'No contact details'));
-        left.addEventListener('click', function () { showForm(c); });
-        row.appendChild(left);
+                left.addEventListener('click', function () { location.href = 'customer.html?id=' + c.id; });
         if (cleanPhone(c.phone)) {
           var call = vyro.el('a', 'mini', 'Call'); call.href = 'tel:' + cleanPhone(c.phone); row.appendChild(call);
         }
