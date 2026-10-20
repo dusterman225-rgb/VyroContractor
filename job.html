@@ -34,6 +34,7 @@
     <label class="field"><span>Target finish date</span><input id="targetEndDate" type="date"></label>
     <label class="field"><span>Internal notes (not shown to customer)</span><textarea id="internalNotes" rows="3" maxlength="2000"></textarea></label>
     <button class="btn" id="saveJob" type="button">Save progress</button>
+    <div class="note">Marking a job Completed moves the customer to your archived customers (unless they have other active jobs).</div>
     <div class="note" id="jMsg"></div>
   </div>
 
@@ -87,6 +88,7 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/util.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/cascade.js"></script>
 <script>
   var $ = function (id) { return document.getElementById(id); };
   function cls(s) { return s.replace(/ /g, ''); }
@@ -140,6 +142,9 @@
           batch.set(jref.collection('updates').doc(), { text: 'Status changed to ' + st, by: who, kind: 'status', createdAt: vyro.stamp() });
         }
         await batch.commit();
+        if (st !== job.status) {
+          try { await vcascade.afterJobStatus(ctx.bizRef, job.customerId, st, id); } catch (e) { /* job saved; archive is optional */ }
+        }
         location.reload();
       } catch (e) { jmsg(vyro.friendly(e), 'err'); btn.disabled = false; }
     });
@@ -232,9 +237,12 @@
       } catch (e) { umsg(vyro.friendly(e), 'err'); this.disabled = false; }
     });
 
+    // ---------- delete ----------
     $('bDel').addEventListener('click', async function () {
-      if (!confirm('Delete this job? The estimate and invoices are kept. (It will come back if you reopen the jobs list while the estimate is still Approved.)')) return;
-      try { await jref.delete(); location.href = 'jobs.html'; } catch (e) { jmsg(vyro.friendly(e), 'err'); }
+      if (!confirm('Delete this job and its update log permanently? The estimate, invoices and expenses are kept for your records.')) return;
+      this.disabled = true; jmsg('Deleting...');
+      try { await vcascade.deleteJob(ctx.bizRef, id); location.href = 'jobs.html'; }
+      catch (e) { jmsg(vyro.friendly(e), 'err'); this.disabled = false; }
     });
   });
 </script>
