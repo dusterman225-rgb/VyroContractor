@@ -168,8 +168,14 @@
       catch (err) { $('msg').textContent = vyro.friendly(err); $('msg').className = 'note err'; }
     });
 
-    load();
+        var editId = new URLSearchParams(location.search).get('edit');
+    load().then(function () {
+      if (editId) {
+        var found = all.filter(function (x) { return x.id === editId; })[0];
+        if (found) showForm(found);
+      }
+    });
   });
-</script>
+  </script>
 </body>
 </html>
