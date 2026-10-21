@@ -85,21 +85,19 @@
       <button class="link" id="bDel" type="button" style="display:none;color:#ff8a8a">Delete invoice</button>
       <div class="note" id="msg"></div>
     </div>
-    <div class="card" id="sendCard" style="display:none">
-      <h2>How do you want to send it?</h2>
-      <p>Your invoice is saved.</p>
-      <button class="btn" id="sendEmail" type="button">Email it to the customer</button>
-      <button class="btn ghost" id="sendManual" type="button">Mark as sent (I'm handing it over myself)</button>
-      <div class="note">If your mail app doesn't send, use one of these instead:</div>
-      <button class="btn ghost" id="sendGmail" type="button">Open in Gmail (browser)</button>
-      <button class="btn ghost" id="sendCopy" type="button">Copy the email text</button>
-      <button class="link" id="sendNot" type="button">Not now</button>
-    </div>
-    <div class="card" id="sentAsk" style="display:none">
-      <h2>Did the email go out?</h2>
-      <p>Your mail app can't tell us whether you pressed Send. If it went out, tap Yes and the invoice becomes Sent.</p>
-      <button class="btn" id="askYes" type="button">Yes, mark as sent</button>
-      <button class="btn ghost" id="askNo" type="button">Not yet</button>
+    <div id="askModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.78);z-index:50;align-items:center;justify-content:center;padding:16px;overflow:auto">
+      <div class="card" style="max-width:420px;width:100%;margin:auto">
+        <h2>Was the email sent?</h2>
+        <p>Your mail app should have opened with the invoice ready. Press Send there, then come back here.</p>
+        <button class="btn" id="askYes" type="button">Yes, it was sent</button>
+        <button class="btn ghost" id="askHand" type="button">I'm handing it over myself</button>
+        <button class="btn ghost" id="askNo" type="button">No, not yet</button>
+        <div class="note">Mail app didn't open or won't send?</div>
+        <button class="btn ghost" id="askAgain" type="button">Open the email again</button>
+        <button class="btn ghost" id="askGmail" type="button">Open in Gmail (browser)</button>
+        <button class="btn ghost" id="askCopy" type="button">Copy the email text</button>
+        <div class="note" id="askMsg"></div>
+      </div>
     </div>
   </form>
 
@@ -344,10 +342,6 @@
     var canSend = !inv || status === 'Draft' || status === 'Sent' || status === 'Partially Paid';
     $('bSend').style.display = canSend ? 'block' : 'none';
     $('bSend').textContent = (!inv || status === 'Draft') ? 'Send' : 'Resend by email';
-    if (inv && status === 'Draft' && params.get('send') === '1') {
-      $('sendCard').style.display = 'block';
-      setTimeout(function () { $('sendCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150);
-    }
 
     // ---------- save ----------
     async function save(newStatus, openSend) {
@@ -390,7 +384,13 @@
           });
           savedId = ref.id;
         }
-        location.replace('invoice.html?id=' + savedId + (openSend ? '&send=1' : ''));
+        if (openSend) {      // stay on the page: open the mail app, then ask whether it was sent
+          inv = Object.assign({}, data, { id: savedId }); status = st;
+          history.replaceState(null, '', 'invoice.html?id=' + savedId);
+          Array.prototype.forEach.call(document.querySelectorAll('.btn,.link'), function (b) { b.disabled = false; });
+          say(''); askSent(); return;
+        }
+        location.replace('invoice.html?id=' + savedId);
       } catch (err) {
         say(vyro.friendly(err), 'err');
         Array.prototype.forEach.call(document.querySelectorAll('.btn,.link'), function (b) { b.disabled = false; });
@@ -410,13 +410,12 @@
         '\n\nThank you,\n' + ctx.biz.name;
       return { to: to, subject: subject, body: body };
     }
+    function ask(t, cls) { $('askMsg').textContent = t; $('askMsg').className = 'note ' + (cls || ''); }
     function afterEmail(p) {
       var warn = [];
       if (!p.to) warn.push('This customer has no email on file. Type the address in your mail app.');
       if (!(ctx.biz.phone || '').trim()) warn.push('Add your business phone in Business profile so customers get a Call line.');
-      say(warn.join(' '), warn.length ? 'err' : '');
-      $('sendCard').style.display = 'none';
-      if (status === 'Draft') $('sentAsk').style.display = 'block';
+      ask(warn.join(' '), warn.length ? 'err' : '');
     }
     function openEmail() {
       var p = emailParts(); afterEmail(p);
@@ -432,24 +431,29 @@
       var p = emailParts();
       try {
         await navigator.clipboard.writeText('To: ' + p.to + '\nSubject: ' + p.subject + '\n\n' + p.body);
-        afterEmail(p); say('Copied. Paste it into any email app.', 'ok');
-      } catch (e) { say('Could not copy on this device.', 'err'); }
+        afterEmail(p); ask('Copied. Paste it into any email app.', 'ok');
+      } catch (e) { ask('Could not copy on this device.', 'err'); }
     }
     $('bTopPay').addEventListener('click', function () {
       $('payCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
       setTimeout(function () { try { $('payAmt').focus(); $('payAmt').select(); } catch (e) { /* ignore */ } }, 450);
     });
     $('bSend').addEventListener('click', function () {
-      if (inv && status !== 'Draft') { openEmail(); return; }   // already sent: just resend the email
+      if (inv && status !== 'Draft') { askSent(); return; }   // already sent: resend the email
       save(null, true);
     });
-    $('sendEmail').addEventListener('click', openEmail);
-    $('sendGmail').addEventListener('click', openGmail);
-    $('sendCopy').addEventListener('click', copyEmail);
-    $('sendManual').addEventListener('click', function () { save('Sent'); });
-    $('sendNot').addEventListener('click', function () { $('sendCard').style.display = 'none'; });
-    $('askYes').addEventListener('click', function () { save('Sent'); });
-    $('askNo').addEventListener('click', function () { $('sentAsk').style.display = 'none'; });
+    function askSent() {
+      $('askModal').style.display = 'flex';
+      $('askHand').style.display = status === 'Draft' ? 'block' : 'none';
+      openEmail();
+    }
+    function markDone() { if (status === 'Draft') save('Sent'); else location.replace('invoice.html?id=' + inv.id); }
+    $('askYes').addEventListener('click', markDone);
+    $('askHand').addEventListener('click', markDone);
+    $('askNo').addEventListener('click', function () { location.replace('invoice.html?id=' + inv.id); });
+    $('askAgain').addEventListener('click', openEmail);
+    $('askGmail').addEventListener('click', openGmail);
+    $('askCopy').addEventListener('click', copyEmail);
     $('bDraft').addEventListener('click', function () { save('Draft'); });
     $('bReopen').addEventListener('click', function () { save('Draft'); });
     $('bVoid').addEventListener('click', function () { if (confirm('Void this invoice?')) save('Voided'); });
