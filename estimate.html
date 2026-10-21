@@ -75,6 +75,9 @@
       <p>Your estimate is saved.</p>
       <button class="btn" id="sendEmail" type="button">Email it to the customer</button>
       <button class="btn ghost" id="sendManual" type="button">Mark as sent (I'm handing it over myself)</button>
+      <div class="note">If your mail app doesn't send, use one of these instead:</div>
+      <button class="btn ghost" id="sendGmail" type="button">Open in Gmail (browser)</button>
+      <button class="btn ghost" id="sendCopy" type="button">Copy the email text</button>
       <button class="link" id="sendNot" type="button">Not now</button>
     </div>
     <div class="card" id="sentAsk" style="display:none">
@@ -95,6 +98,7 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/util.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/public.js"></script>
 <script>
   var TYPES = ['Labor', 'Materials', 'Other'];
   var DEFAULT_TERMS = 'Balance is due on completion unless agreed otherwise in writing. This estimate is valid until the date shown. Prices may change if the scope of work changes.';
@@ -248,14 +252,19 @@
     // ---------- state / buttons ----------
     var status = est ? est.status : 'Draft';
     var locked = status === 'Approved' || status === 'Voided';
-    $('pageTag').textContent = est ? (est.number + ' \u00b7 ' + status) : 'New estimate';
+    $('pageTag').textContent = est ? (est.number + ' · ' + status) : 'New estimate';
 
     if (locked) {
       Array.prototype.forEach.call($('form').querySelectorAll('input,select,textarea,.line .mini'), function (x) { x.disabled = true; });
       $('addLine').style.display = 'none'; $('save').style.display = 'none';
       $('lockNote').style.display = 'block';
+      var online = '';
+      if (est && est.approvedVia === 'customer link') {
+        online = 'Accepted online by ' + (est.acceptedBy || 'the customer') +
+          (est.acceptedAt && est.acceptedAt.toDate ? ' on ' + est.acceptedAt.toDate().toLocaleString() : '') + '. ';
+      }
       $('lockText').textContent = status === 'Approved'
-        ? 'This estimate is approved and locked. To change it, void it and make a new one.'
+        ? online + 'This estimate is approved and locked. To change it, void it and make a new one.'
         : 'This estimate is voided. Reopen it as a draft to edit it.';
     }
     if (est) {
@@ -272,6 +281,7 @@
       $('sendCard').style.display = 'block';
       setTimeout(function () { $('sendCard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150);
     }
+    if (params.get('linkerr') === '1') say('The estimate was saved, but the online accept link could not be created. Make sure the new Firestore rules are published, then tap Send again.', 'err');
     if (status === 'Draft' || status === 'Sent') $('bApprove').style.display = 'block';
     if (status === 'Sent') $('bReject').style.display = 'block';
     if (status === 'Rejected' || status === 'Voided') $('bReopen').style.display = 'block';
@@ -294,6 +304,8 @@
         totalCents: t.totalCents, terms: $('terms').value.trim(), internalNotes: $('internalNotes').value.trim(),
         status: st, updatedAt: vyro.stamp()
       };
+      var token = (est && est.publicToken) || (openSend ? vpublic.makeToken() : '');
+      if (token) data.publicToken = token;
       if (newStatus && newStatus !== status) {
         var tsKey = { Sent: 'sentAt', Approved: 'approvedAt', Rejected: 'rejectedAt', Voided: 'voidedAt' }[newStatus];
         if (tsKey) data[tsKey] = vyro.stamp();
@@ -316,6 +328,13 @@
             tx.set(ref, data);
           });
           savedId = ref.id;
+        }
+        // online accept link: publish when sending, close it when voided, rejected or approved by hand
+        if (openSend) {
+          try { await vpublic.publishEstimate(ctx, savedId, data, token); }
+          catch (pe) { location.replace('estimate.html?id=' + savedId + '&linkerr=1'); return; }
+        } else if (est && est.publicToken && ['Voided', 'Rejected', 'Approved'].indexOf(newStatus) > -1) {
+          try { await vpublic.closeEstimate(ctx, est.publicToken); } catch (ce) { /* optional */ }
         }
         // move the lead along when the estimate is sent
         if (st === 'Sent' && status !== 'Sent' && leadId) {
@@ -365,24 +384,50 @@
     }
 
     $('form').addEventListener('submit', function (e) { e.preventDefault(); save(null); });
-    function openEmail() {
-      var t = calc();
-      var to = $('cemail').value.trim();
-      if (!to) say('This customer has no email on file. Add one on their customer page, or type it in your mail app.', 'err');
-      else say('');
+    function emailParts() {
+      var t = calc(), to = $('cemail').value.trim();
       var dep = Math.round(t.totalCents * pct($('depositPct').value) / 100);
+      var phone = (ctx.biz.phone || '').trim();
+      var link = est.publicToken ? location.origin + '/accept.html?t=' + est.publicToken : '';
       var subject = 'Estimate ' + est.number + ' from ' + ctx.biz.name;
       var body = 'Hi ' + $('cname').value.trim() + ',\n\nThank you for the opportunity. Here is estimate ' + est.number +
         ($('title').value.trim() ? ' for ' + $('title').value.trim() : '') + '. The total is ' + vutil.fmt(t.totalCents) +
         (dep ? ', with a deposit of ' + vutil.fmt(dep) + ' to get started' : '') +
-        ($('validUntil').value ? '. This estimate is valid until ' + $('validUntil').value : '') +
-        '.\n\nPlease let me know if you have any questions or would like to move forward.\n\nThank you,\n' + ctx.biz.name;
+        ($('validUntil').value ? '. This estimate is valid until ' + $('validUntil').value : '') + '.\n\n' +
+        (link ? 'Review and accept your estimate online:\n' + link + '\n\n' : '') +
+        (phone ? 'Questions? Call ' + ctx.biz.name + ': ' + phone : 'Questions? Just reply to this email.') +
+        '\n\nThank you,\n' + ctx.biz.name;
+      return { to: to, subject: subject, body: body };
+    }
+    function afterEmail(p) {
+      var warn = [];
+      if (!p.to) warn.push('This customer has no email on file. Type the address in your mail app.');
+      if (!(ctx.biz.phone || '').trim()) warn.push('Add your business phone in Business profile so customers get a Call line.');
+      say(warn.join(' '), warn.length ? 'err' : '');
       $('sendCard').style.display = 'none';
       if (status === 'Draft') $('sentAsk').style.display = 'block';
-      window.location.href = 'mailto:' + to + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    }
+    function openEmail() {
+      var p = emailParts(); afterEmail(p);
+      window.location.href = 'mailto:' + encodeURIComponent(p.to).replace('%40', '@') + '?subject=' + encodeURIComponent(p.subject) +
+        '&body=' + encodeURIComponent(p.body.replace(/\n/g, '\r\n'));
+    }
+    function openGmail() {
+      var p = emailParts(); afterEmail(p);
+      window.open('https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(p.to) + '&su=' + encodeURIComponent(p.subject) +
+        '&body=' + encodeURIComponent(p.body), '_blank');
+    }
+    async function copyEmail() {
+      var p = emailParts();
+      try {
+        await navigator.clipboard.writeText('To: ' + p.to + '\nSubject: ' + p.subject + '\n\n' + p.body);
+        afterEmail(p); say('Copied. Paste it into any email app.', 'ok');
+      } catch (e) { say('Could not copy on this device.', 'err'); }
     }
     $('bSend').addEventListener('click', function () { save(null, true); });
     $('sendEmail').addEventListener('click', openEmail);
+    $('sendGmail').addEventListener('click', openGmail);
+    $('sendCopy').addEventListener('click', copyEmail);
     $('sendManual').addEventListener('click', function () { save('Sent'); });
     $('sendNot').addEventListener('click', function () { $('sendCard').style.display = 'none'; });
     $('askYes').addEventListener('click', function () { save('Sent'); });
