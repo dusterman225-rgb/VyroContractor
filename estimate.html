@@ -394,7 +394,7 @@
         ($('title').value.trim() ? ' for ' + $('title').value.trim() : '') + '. The total is ' + vutil.fmt(t.totalCents) +
         (dep ? ', with a deposit of ' + vutil.fmt(dep) + ' to get started' : '') +
         ($('validUntil').value ? '. This estimate is valid until ' + $('validUntil').value : '') + '.\n\n' +
-        (link ? 'Review and accept your estimate online:\n' + link + '\n\n' : '') +
+        (link ? 'ACCEPT YOUR ESTIMATE HERE (tap the link):\n' + link + '\n\n' : '') +
         (phone ? 'Questions? Call ' + ctx.biz.name + ': ' + phone : 'Questions? Just reply to this email.') +
         '\n\nThank you,\n' + ctx.biz.name;
       return { to: to, subject: subject, body: body };
