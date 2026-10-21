@@ -15,6 +15,12 @@
     <div class="tag">Estimates</div>
   </div>
 
+  <div class="card" id="acceptedBanner" style="display:none">
+    <h2>Accepted online</h2>
+    <p id="acceptedText"></p>
+    <a class="btn" href="jobs.html">View active jobs</a>
+  </div>
+
   <div class="card totals">
     <div class="row"><span>Awaiting reply</span><b id="sumSent">-</b></div>
     <div class="row"><span>Approved (now in Jobs)</span><b id="sumApproved">-</b></div>
@@ -38,6 +44,7 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/util.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/public.js"></script>
 <script>
   var TABS = ['Open', 'Draft', 'Sent', 'Rejected', 'Voided'];
   var $ = function (id) { return document.getElementById(id); };
@@ -79,13 +86,22 @@
         var left = vyro.el('div', 'grow');
         var top = vyro.el('b'); top.appendChild(vyro.el('span', 'pill ' + e.status, e.status)); top.appendChild(document.createTextNode(e.customerName));
         left.appendChild(top);
-        left.appendChild(vyro.el('small', '', (e.number || '') + (e.title ? ' \u00b7 ' + e.title : '')));
+        left.appendChild(vyro.el('small', '', (e.number || '') + (e.title ? ' · ' + e.title : '')));
         left.addEventListener('click', function () { location.href = 'estimate.html?id=' + e.id; });
         row.appendChild(left);
         row.appendChild(vyro.el('b', '', vutil.fmt(e.totalCents)));
         box.appendChild(row);
       });
     }
+
+    // pull in estimates customers accepted through their email link
+    try {
+      var acc = await vpublic.syncAccepted(ctx);
+      if (acc.length) {
+        $('acceptedText').textContent = acc.map(function (a) { return a.by + ' accepted ' + a.number + ' (' + a.customer + ')'; }).join('. ') + '. A job was created for each.';
+        $('acceptedBanner').style.display = 'block';
+      }
+    } catch (e) { /* best effort; needs the latest Firestore rules */ }
 
     try {
       var snap = await ctx.bizRef.collection('estimates').orderBy('createdAt', 'desc').get();
