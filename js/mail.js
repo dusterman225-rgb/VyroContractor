@@ -24,3 +24,4 @@
   }
   window.vmail = { ready: function () { return !!url(); }, send: send, explain: explain };
 })();
+        
