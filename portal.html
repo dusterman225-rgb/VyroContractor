@@ -42,6 +42,10 @@
       <div id="invList"></div>
       <div class="note" id="invNone"></div>
     </div>
+    <div class="card" id="docCard" style="display:none">
+      <h2>Documents</h2>
+      <div id="dList"></div>
+    </div>
     <div class="card">
       <h2>Messages</h2>
       <div id="mList"></div>
@@ -115,6 +119,19 @@
         $('invList').appendChild(row);
       });
     } catch (e) { $('invNone').textContent = 'Invoices could not be loaded.'; }
+    try {
+      var ds = await ref.collection('documents').get();
+      if (!ds.empty) {
+        $('docCard').style.display = 'block';
+        ds.forEach(function (d) {
+          var x = d.data(), row = h('div', 'item'), left = h('div', 'grow');
+          left.appendChild(h('b', '', x.title || 'Document'));
+          left.appendChild(h('small', '', 'Tap to read and print'));
+          left.addEventListener('click', function () { location.href = 'portal-doc.html?p=' + encodeURIComponent(id) + '&d=' + encodeURIComponent(d.id); });
+          row.appendChild(left); $('dList').appendChild(row);
+        });
+      }
+    } catch (e) { /* documents are optional */ }
     async function loadMessages() {
       try {
         var ms = await ref.collection('messages').orderBy('createdAt', 'asc').get();
@@ -180,5 +197,7 @@
     } catch (e) { $('err').textContent = 'Could not load your project. Please try again, or contact your contractor.'; }
   });
 </script>
+<script src="js/helpbot-config.js"></script>
+<script src="js/helpbot.js"></script>
 </body>
 </html>
