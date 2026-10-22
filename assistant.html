@@ -113,7 +113,7 @@
         var d = await r.json();
         if (r.status === 429) throw { friendly: 'You have reached today\'s assistant limit for your business. It resets tomorrow.' };
         if (r.status === 401 || r.status === 403) throw { friendly: 'I could not open your records. Please sign out and back in, then try again.' };
-        if (!d.reply) throw {};
+        if (!d.reply) throw { detail: d.detail || d.error || ('status ' + r.status) };
         var text = d.reply.replace(/\*\*/g, '').replace(/^#+\s*/gm, '');
         wait.remove();
         var m = bubble('bot', text); hist.push({ role: 'assistant', content: text });
@@ -121,7 +121,9 @@
         a.addEventListener('click', function (e) { e.preventDefault(); try { navigator.clipboard.writeText(text); a.textContent = 'Copied'; } catch (x) { a.textContent = 'Could not copy'; } });
         m.ts.appendChild(a);
       } catch (e) {
-        wait.remove(); bubble('bot', (e && e.friendly) || 'Sorry, I\'m unavailable right now. Please try again in a minute.'); hist.pop();
+        wait.remove(); hist.pop();
+        var det = (e && e.detail) || (e && e.friendly ? '' : 'could not reach the helper. Check the address in js/helpbot-config.js.');
+        bubble('bot', (e && e.friendly) || ('Sorry, I\'m unavailable right now. Please try again in a minute.' + (window.VYRO_HELP_DEBUG && det ? '\n\n[Debug: ' + det + ']' : '')));
       }
       busy = false; $('send').disabled = false; $('q').focus();
     }
