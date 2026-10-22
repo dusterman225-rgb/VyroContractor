@@ -68,4 +68,3 @@
   window.vcascade = { dropPortalsForCustomer: dropPortalsForCustomer, ACTIVE: ACTIVE, deleteJob: deleteJob, deleteCustomer: deleteCustomer,
                       jobsOfCustomer: jobsOfCustomer, setArchived: setArchived, afterJobStatus: afterJobStatus };
 })();
-    
