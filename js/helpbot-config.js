@@ -1,2 +1,2 @@
-window.VYRO_HELP_URL = "PUT-YOUR-WORKER-ADDRESS-HERE";
+window.VYRO_HELP_URL = "https://vyro-help.dusterman225.workers.dev";
   
