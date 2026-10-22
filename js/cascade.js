@@ -2,9 +2,26 @@
 (function () {
   var ACTIVE = ['Not Started', 'In Progress', 'On Hold'];
 
+  // Portals live in js/portal.js; load it on demand so any page can clean up.
+  function withPortal() {
+    if (window.vportal) return Promise.resolve(true);
+    return new Promise(function (res) {
+      var s = document.createElement('script'); s.src = 'js/portal.js';
+      s.onload = function () { res(!!window.vportal); }; s.onerror = function () { res(false); };
+      document.head.appendChild(s);
+    });
+  }
+  async function dropPortalForJob(jobId) {
+    try { if (await withPortal()) await vportal.removeForJob(jobId); } catch (e) { /* portal cleanup is best-effort */ }
+  }
+  async function dropPortalsForCustomer(bizRef, customerId) {
+    try { if (await withPortal()) await vportal.removeForCustomer({ bizRef: bizRef }, customerId); } catch (e) { /* best-effort */ }
+  }
+
   // Deletes a job and its update log. Marks the estimate "dismissed" so the Jobs page does not re-create it.
   async function deleteJob(bizRef, jobId) {
     var jref = bizRef.collection('jobs').doc(jobId);
+    await dropPortalForJob(jobId);
     var us = await jref.collection('updates').get();
     var docs = us.docs.slice();
     while (docs.length) {
@@ -30,6 +47,7 @@
   }
 
   async function setArchived(bizRef, customerId, flag) {
+    if (flag) await dropPortalsForCustomer(bizRef, customerId);
     await bizRef.collection('customers').doc(customerId).update({
       archived: !!flag, archivedAt: flag ? vyro.stamp() : null, updatedAt: vyro.stamp()
     });
@@ -47,6 +65,7 @@
     }
   }
 
-  window.vcascade = { ACTIVE: ACTIVE, deleteJob: deleteJob, deleteCustomer: deleteCustomer,
+  window.vcascade = { dropPortalsForCustomer: dropPortalsForCustomer, ACTIVE: ACTIVE, deleteJob: deleteJob, deleteCustomer: deleteCustomer,
                       jobsOfCustomer: jobsOfCustomer, setArchived: setArchived, afterJobStatus: afterJobStatus };
 })();
+    
