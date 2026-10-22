@@ -20,3 +20,4 @@
   }
   window.vutil = { fmt: fmt, toCents: toCents, totals: totals, todayStr: todayStr };
 })();
+                              
