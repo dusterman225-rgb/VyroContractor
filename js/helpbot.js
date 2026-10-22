@@ -107,10 +107,14 @@
     try {
       var r = await fetch(URL_, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: S.hist, page: location.pathname }) });
       var d = await r.json();
-      if (!d.reply) throw new Error('x');
+      if (!d.reply) { var er = new Error('x'); er.detail = d.detail || d.error || ('status ' + r.status); throw er; }
       var text = d.reply.replace(/\*\*/g, '').replace(/^#+\s*/gm, '');
       wait.remove(); S.pending = false; bubble('bot', text); S.hist.push({ role: 'assistant', content: text }); save();
-    } catch (e) { wait.remove(); S.pending = false; S.hist.pop(); bubble('bot', 'Sorry, I\'m unavailable right now. Please try again in a minute.'); }
+    } catch (e) {
+      wait.remove(); S.pending = false; S.hist.pop();
+      var det = e && e.detail ? e.detail : 'could not reach the helper. Check the address in js/helpbot-config.js.';
+      bubble('bot', 'Sorry, I\'m unavailable right now. Please try again in a minute.' + (window.VYRO_HELP_DEBUG ? '\n\n[Debug: ' + det + ']' : ''));
+    }
     busy = false; send.disabled = false;
   }
   send.addEventListener('click', go);
