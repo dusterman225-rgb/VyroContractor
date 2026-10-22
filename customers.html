@@ -118,8 +118,27 @@
           map.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(c.address);
           map.target = '_blank'; map.rel = 'noopener'; row.appendChild(map);
         }
+        if (canDelete) {
+          var dl = vyro.el('a', 'mini', 'Delete'); dl.href = '#'; dl.style.color = '#ff8a8a';
+          dl.addEventListener('click', function (ev) { ev.preventDefault(); removeCustomer(c.id, null); });
+          row.appendChild(dl);
+        }
         box.appendChild(row);
       });
+    }
+
+    async function removeCustomer(cid, btn) {
+      if (btn) btn.disabled = true;
+      try {
+        var jobs = await vcascade.jobsOfCustomer(ctx.bizRef, cid);
+        var msg = jobs.length
+          ? 'Delete this customer AND their ' + jobs.length + (jobs.length === 1 ? ' job' : ' jobs') + ' and their customer portal? Their estimates and invoices are kept for your records. This cannot be undone.'
+          : 'Delete this customer? This cannot be undone.';
+        if (!confirm(msg)) { if (btn) btn.disabled = false; return; }
+        await vcascade.deleteCustomer(ctx.bizRef, cid);
+        await load(); showList();
+      } catch (err) { $('err').textContent = vyro.friendly(err); $('msg').textContent = vyro.friendly(err); $('msg').className = 'note err'; }
+      if (btn) btn.disabled = false;
     }
 
     async function load() {
@@ -169,17 +188,7 @@
 
     $('del').addEventListener('click', async function () {
       if (!editingId) return;
-      var btn = this; btn.disabled = true;
-      try {
-        var jobs = await vcascade.jobsOfCustomer(ctx.bizRef, editingId);
-        var msg = jobs.length
-          ? 'Delete this customer AND their ' + jobs.length + (jobs.length === 1 ? ' job' : ' jobs') + '? Their estimates and invoices are kept for your records. This cannot be undone.'
-          : 'Delete this customer? This cannot be undone.';
-        if (!confirm(msg)) { btn.disabled = false; return; }
-        await vcascade.deleteCustomer(ctx.bizRef, editingId);
-        await load(); showList();
-      } catch (err) { $('msg').textContent = vyro.friendly(err); $('msg').className = 'note err'; }
-      btn.disabled = false;
+      await removeCustomer(editingId, this);
     });
 
     var editId = new URLSearchParams(location.search).get('edit');
