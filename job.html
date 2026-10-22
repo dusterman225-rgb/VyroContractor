@@ -38,16 +38,6 @@
     <div class="note" id="jMsg"></div>
   </div>
 
-  <div class="card">
-    <h2>Customer portal</h2>
-    <p id="pStat">Checking...</p>
-    <button class="btn" id="pMake" type="button" style="display:none">Create portal and email customer</button>
-    <button class="btn ghost" id="pResend" type="button" style="display:none">Email login link again</button>
-    <button class="btn ghost" id="pSync" type="button" style="display:none">Refresh what the customer sees</button>
-    <div class="note">The customer sees status, dates, contract total, sent invoices and the updates you choose to share. Never your costs, profit or internal notes. Link: your site address + /portal-login.html</div>
-    <div class="note" id="pMsg"></div>
-  </div>
-
   <div class="card totals">
     <h2>Money</h2>
     <div class="row"><span>Contract total</span><b id="mContract">-</b></div>
@@ -78,7 +68,7 @@
   <div class="card">
     <h2>Updates</h2>
     <label class="field"><span>Add an update</span><textarea id="uText" rows="2" maxlength="1000" placeholder="e.g. Demo finished, waiting on permit"></textarea></label>
-    <label class="check" style="display:flex;gap:10px;align-items:center;margin:8px 0"><input type="checkbox" id="uShare" style="width:auto"><span>Show this to the customer in their portal</span></label>
+    <label class="check" style="display:flex;gap:10px;align-items:center;margin:8px 0"><input type="checkbox" id="uShare" style="width:auto"><span>Show this to the customer in their portal (if they have one)</span></label>
     <button class="btn ghost" id="uAdd" type="button">Add update</button>
     <div id="uList"></div>
     <div class="note" id="uMsg"></div>
@@ -136,39 +126,7 @@
     if (canManage) $('bDel').style.display = 'block';
 
     function jmsg(t, c) { $('jMsg').textContent = t; $('jMsg').className = 'note ' + (c || ''); }
-    var hasPortal = false;
-    function pmsg(t, c) { $('pMsg').textContent = t; $('pMsg').className = 'note ' + (c || ''); }
-    async function paintPortal() {
-      try { hasPortal = await vportal.exists(id); } catch (e) { hasPortal = false; }
-      var em = (job.customerEmail || '').trim();
-      $('pMake').style.display = !hasPortal && em ? 'block' : 'none';
-      $('pResend').style.display = hasPortal ? 'block' : 'none';
-      $('pSync').style.display = hasPortal ? 'block' : 'none';
-      $('pStat').textContent = hasPortal ? 'Portal is on for ' + em + '.' : (em ? 'No portal yet for ' + em + '.' : 'Add an email to this customer first, then come back to create their portal.');
-    }
-    $('pMake').addEventListener('click', async function () {
-      this.disabled = true; pmsg('Creating...');
-      try {
-        var r = await vportal.ensure(ctx, id, job);
-        if (r.ok) pmsg('Done. ' + (r.emailed ? 'A link to set their password was emailed to ' + r.email + '.' : ''), '');
-        else pmsg(r.message || 'Could not create the portal.', 'err');
-      } catch (e) { pmsg(vyro.friendly(e), 'err'); }
-      this.disabled = false; paintPortal();
-    });
-    $('pResend').addEventListener('click', async function () {
-      this.disabled = true; pmsg('Sending...');
-      try {
-        var r = await vportal.ensure(ctx, id, job, true);
-        pmsg(r.ok ? 'Sent a new login link to ' + r.email + '.' : (r.message || 'Could not send.'), r.ok ? '' : 'err');
-      } catch (e) { pmsg(vyro.friendly(e), 'err'); }
-      this.disabled = false;
-    });
-    $('pSync').addEventListener('click', async function () {
-      this.disabled = true; pmsg('Refreshing...');
-      try { await vportal.syncJob(ctx, id); pmsg('Updated.', ''); } catch (e) { pmsg(vyro.friendly(e), 'err'); }
-      this.disabled = false;
-    });
-    paintPortal().then(function () { if (hasPortal) { vportal.syncJob(ctx, id, job).catch(function () {}); } });
+    vportal.exists(id).then(function (x) { if (x) vportal.syncJob(ctx, id, job).catch(function () {}); }).catch(function () {});
 
     function umsg(t, c) { $('uMsg').textContent = t; $('uMsg').className = 'note ' + (c || ''); }
 
