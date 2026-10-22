@@ -82,7 +82,7 @@
   function h(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function clean(p) { return (p || '').replace(/[^0-9+]/g, ''); }
   function cls(s) { return (s || '').replace(/ /g, ''); }
-  $('out').addEventListener('click', function () { auth.signOut().then(function () { location.replace('portal-login.html'); }); });
+  $('out').addEventListener('click', function () { try { sessionStorage.removeItem('vyroHelp'); } catch (e) { /* ignore */ } auth.signOut().then(function () { location.replace('portal-login.html'); }); });
 
   async function showProject(id, p) {
     $('list').textContent = ''; $('proj').style.display = 'block';
