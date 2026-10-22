@@ -93,7 +93,7 @@
 
   function signIn(email, password) { return auth.signInWithEmailAndPassword(email, password); }
   function resetPassword(email) { return auth.sendPasswordResetEmail(email); }
-  function signOut() { return auth.signOut(); }
+  function signOut() { try { sessionStorage.removeItem('vyroHelp'); } catch (e) { /* ignore */ } return auth.signOut(); }
 
   function requireAuth(cb) {
     auth.onAuthStateChanged(function (u) {
@@ -133,4 +133,14 @@
     signIn: signIn, resetPassword: resetPassword, signOut: signOut,
     requireAuth: requireAuth, redirectIfSignedIn: redirectIfSignedIn,
     loadContext: loadContext, start: start };
+
+  // Help chat on every page. It remembers the conversation while the person moves between pages.
+  try {
+    if (!window.__vyroHelpbot && !/assistant\.html$/.test(location.pathname)) {
+      var addScript = function (src, done) {
+        var s = document.createElement('script'); s.src = src; if (done) s.onload = done; document.head.appendChild(s);
+      };
+      addScript('js/helpbot-config.js', function () { addScript('js/helpbot.js'); });
+    }
+  } catch (e) { /* the help chat is optional */ }
 })();
