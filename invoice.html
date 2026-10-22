@@ -15,7 +15,7 @@
     <div class="tag" id="pageTag">New invoice</div>
   </div>
 
-  <div id="topPay" style="display:none"><button class="btn" id="bTopPay" type="button">Payment received</button></div>
+  <div id="topPay" style="display:none"><button class="btn" id="bTopPay" type="button">Payment received</button><a class="btn ghost" id="bVyro" href="#">Pay with Vyro (crypto)</a></div>
 
   <div class="card" id="lockNote" style="display:none"><p id="lockText"></p></div>
 
@@ -117,7 +117,7 @@
       <label class="field"><span>Date received</span><input id="payDate" type="date"></label>
       <label class="field"><span>Note (optional)</span><input id="payNote" type="text" maxlength="200"></label>
       <button class="btn" id="payGo" type="button">Record payment</button>
-      <div class="note">This records a payment you received outside Vyro, like cash or a check. Pay with Vyro payments will appear here automatically once that feature is built. They are never entered by hand.</div>
+      <div class="note">This records a payment you received outside Vyro, like cash or a check. Pay with Vyro (crypto) payments are recorded automatically from the Pay with Vyro page. They are never entered by hand.</div>
     </div>
     <div class="note" id="payMsg"></div>
   </div>
@@ -339,7 +339,7 @@
       if (status === 'Draft') $('bVoid').style.display = 'block';
       if (canManage && paidSoFar === 0 && (status === 'Draft' || status === 'Voided')) $('bDel').style.display = 'block';
     }
-    if (inv && (status === 'Sent' || status === 'Partially Paid')) $('topPay').style.display = 'block';
+    if (inv && (status === 'Sent' || status === 'Partially Paid')) { $('topPay').style.display = 'block'; $('bVyro').href = 'paywithvyro.html?id=' + inv.id; }
     var canSend = !inv || status === 'Draft' || status === 'Sent' || status === 'Partially Paid';
     $('bSend').style.display = canSend ? 'block' : 'none';
     $('bSend').textContent = (!inv || status === 'Draft') ? 'Send' : 'Resend by email';
@@ -488,7 +488,7 @@
           if (!p.reversed && canManage) {
             var rv = vyro.el('button', 'mini danger', 'Reverse'); rv.type = 'button';
             rv.addEventListener('click', async function () {
-              if (!confirm('Reverse this payment? It stays on record, marked reversed.')) return;
+              if (!confirm(p.source === 'vyro' ? 'Reverse this crypto payment in your records? This does NOT send any money back to the customer. Refunds must be sent from your wallet yourself.' : 'Reverse this payment? It stays on record, marked reversed.')) return;
               try {
                 await vyro.db.runTransaction(async function (tx) {
                   var is = await tx.get(iref), pr = await tx.get(d.ref);
