@@ -21,6 +21,7 @@
           <small id="mWho"></small>
         </div>
         <a class="mi" id="miFin" href="finances.html" style="display:none">Finances</a>
+        <a class="mi" id="miMsg" href="messages.html">Messages</a>
         <a class="mi" href="customers.html">Customers</a>
         <a class="mi" href="team.html">Team</a>
         <a class="mi" href="profile.html">Business profile</a>
@@ -39,6 +40,7 @@
 
   <div class="card">
     <h2>Needs your attention</h2>
+    <div class="row"><span>Unread customer messages</span><b id="nMsg">...</b></div>
     <div class="row"><span>New leads</span><b id="nNew">...</b></div>
     <div class="row"><span>Leads waiting 2+ days</span><b id="nStale">...</b></div>
     <div class="row"><span>Follow-ups due</span><b id="nDue">...</b></div>
@@ -59,7 +61,7 @@
 
   <div class="card">
     <h2>Coming next</h2>
-    <p>Automatic emails, then the customer portal.</p>
+    <p>Contracts and documents for the customer portal.</p>
   </div>
 
   <div class="note err" id="err"></div>
@@ -119,6 +121,12 @@
       $('nNew').textContent = $('nStale').textContent = $('nDue').textContent = '-';
       $('err').textContent = 'Could not load leads. Check the Firestore rules were published.';
     }
+
+    try {
+      var ps = await vyro.db.collection('portals').where('bizId', '==', ctx.bizId).get(), unread = 0;
+      ps.forEach(function (d) { unread += d.data().unreadCount || 0; });
+      $('nMsg').textContent = unread; if (unread) { $('nMsg').className = 'late'; $('miMsg').textContent = 'Messages (' + unread + ')'; }
+    } catch (e) { $('nMsg').textContent = '-'; }
 
     try {
       var es = await ctx.bizRef.collection('estimates').where('status', '==', 'Sent').get();
