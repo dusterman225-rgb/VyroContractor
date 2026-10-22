@@ -21,6 +21,8 @@
           <small id="mWho"></small>
         </div>
         <a class="mi" id="miFin" href="finances.html" style="display:none">Finances</a>
+        <a class="mi" id="miDoc" href="documents.html" style="display:none">Documents</a>
+        <a class="mi" id="miPay" href="paysettings.html" style="display:none">Pay with Vyro</a>
         <a class="mi" id="miMsg" href="messages.html">Messages</a>
         <a class="mi" href="customers.html">Customers</a>
         <a class="mi" href="team.html">Team</a>
@@ -92,6 +94,8 @@
     $('mProduct').textContent = PRODUCT_NAMES[ctx.biz.product] || '';
     $('mWho').textContent = ctx.role + ' · ' + ctx.user.email;
     if (ctx.role === 'owner') $('miFin').style.display = 'block';
+    if (ctx.role === 'owner' || ctx.role === 'supervisor') $('miDoc').style.display = 'block';
+    if (ctx.role === 'owner') $('miPay').style.display = 'block';
 
     // pull in estimates customers accepted through their email link
     try {
