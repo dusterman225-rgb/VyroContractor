@@ -30,7 +30,7 @@
           <a class="mi" href="messages.html">Messages <span class="badge" id="bMsg2" style="display:none"></span></a>
         </details>
         <details>
-          <summary class="mg">Money</summary>
+          <summary class="mg" id="mgMoney">Money</summary>
           <a class="mi" href="invoices.html">Invoices</a>
           <a class="mi" href="expenses.html">Expenses and bills</a>
           <a class="mi" id="miFin" href="finances.html" style="display:none">Finances</a>
@@ -100,6 +100,10 @@
     $('mWho').textContent = ctx.role + ' \u00b7 ' + ctx.user.email;
     if (ctx.role === 'owner') { $('miFin').style.display = 'block'; $('miPay').style.display = 'block'; }
     if (canMoney) $('miDoc').style.display = 'block';
+    else {
+      var mg = $('mgMoney'); if (mg && mg.parentNode) mg.parentNode.style.display = 'none';
+      Array.prototype.forEach.call(document.querySelectorAll('.qa a'), function (a) { if (/invoice/.test(a.getAttribute('href') || '')) a.style.display = 'none'; });
+    }
 
     // pull in estimates customers accepted through their email link
     try {
@@ -138,7 +142,7 @@
       })(),
       (async function () {
         try {
-          (await ctx.bizRef.collection('invoices').get()).forEach(function (d) {
+          (canMoney ? await ctx.bizRef.collection('invoices').get() : { forEach: function () {} }).forEach(function (d) {
             var i = d.data();
             if (i.status === 'Sent' || i.status === 'Partially Paid') {
               n.owed += (i.totalCents || 0) - (i.paidCents || 0);
