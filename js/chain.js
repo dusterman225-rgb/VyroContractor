@@ -103,4 +103,3 @@
 
   window.vchain = { cfg: CFG, isAddress: isAddress, makeReference: makeReference, quote: quote, uri: uri, findPayment: findPayment, explorer: explorer, qrSvg: qrSvg };
 })();
-    
