@@ -7,6 +7,7 @@
 <title>Job - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -22,62 +23,71 @@
     <div class="nav" id="jLinks"></div>
   </div>
 
-  <div class="card">
-    <h2>Progress</h2>
-    <label class="field"><span>Status</span>
-      <select id="status">
-        <option>Not Started</option><option>In Progress</option><option>On Hold</option>
-        <option>Completed</option><option>Cancelled</option>
-      </select>
-    </label>
-    <label class="field"><span>Start date</span><input id="startDate" type="date"></label>
-    <label class="field"><span>Target finish date</span><input id="targetEndDate" type="date"></label>
-    <label class="field"><span>Internal notes (not shown to customer)</span><textarea id="internalNotes" rows="3" maxlength="2000"></textarea></label>
-    <button class="btn" id="saveJob" type="button">Save progress</button>
-    <div class="note">Marking a job Completed moves the customer to your archived customers (unless they have other active jobs).</div>
-    <div class="note" id="jMsg"></div>
+  <div class="strip">
+    <div><small>Contract</small><b id="mContract">-</b></div>
+    <div><small>Paid</small><b id="mPaid">-</b></div>
+    <div><small>Owed</small><b id="mOwed">-</b></div>
   </div>
 
-  <div class="card totals">
-    <h2>Money</h2>
-    <div class="row"><span>Contract total</span><b id="mContract">-</b></div>
-    <div class="row"><span>Invoiced (incl. drafts)</span><b id="mBilled">-</b></div>
-    <div class="row"><span>Paid</span><b id="mPaid">-</b></div>
-    <div class="row"><span>Still owed (sent invoices)</span><b id="mOwed">-</b></div>
-    <div class="row big"><span>Left to invoice</span><b id="mLeft">-</b></div>
-  </div>
+  <details class="sec" open>
+    <summary>Progress <small id="progSum"></small></summary>
+    <div class="in">
+      <label class="field"><span>Status</span>
+        <select id="status">
+          <option>Not Started</option><option>In Progress</option><option>On Hold</option>
+          <option>Completed</option><option>Cancelled</option>
+        </select>
+      </label>
+      <label class="field"><span>Start date</span><input id="startDate" type="date"></label>
+      <label class="field"><span>Target finish date</span><input id="targetEndDate" type="date"></label>
+      <label class="field"><span>Internal notes (never shown to the customer)</span><textarea id="internalNotes" rows="3" maxlength="2000"></textarea></label>
+      <button class="btn" id="saveJob" type="button">Save progress</button>
+      <div class="note" id="jMsg"></div>
+    </div>
+  </details>
 
-  <div class="card">
-    <h2>Invoices</h2>
-    <div id="invList"></div>
-    <div class="note" id="invNone"></div>
-    <a class="btn" id="newInv" href="#">New invoice for this job</a>
-  </div>
+  <details class="sec" id="invSec">
+    <summary>Invoices <small id="invSum"></small></summary>
+    <div class="in">
+      <div id="invList"></div>
+      <div class="note" id="invNone"></div>
+      <div class="row"><span>Invoiced so far</span><b id="mBilled">-</b></div>
+      <div class="row"><span>Left to invoice</span><b id="mLeft">-</b></div>
+      <a class="btn" id="newInv" href="#">New invoice for this job</a>
+    </div>
+  </details>
 
-  <div class="card totals">
-    <h2>Costs and profit</h2>
-    <div class="row"><span>Costs (incl. unpaid bills)</span><b id="cAll">-</b></div>
-    <div class="row"><span>Expected profit (contract - costs)</span><b id="cExp">-</b></div>
-    <div class="row"><span>Margin</span><b id="cMargin">-</b></div>
-    <div class="row big"><span>Cash in hand so far (paid - costs paid)</span><b id="cCash">-</b></div>
-    <div id="costList"></div>
-    <div class="note" id="costNone"></div>
-    <a class="btn" id="newCost" href="#">Add expense for this job</a>
-  </div>
+  <details class="sec" id="costSec">
+    <summary>Costs and profit <small id="costSum"></small></summary>
+    <div class="in">
+      <div class="row"><span>Costs (incl. unpaid bills)</span><b id="cAll">-</b></div>
+      <div class="row"><span>Expected profit</span><b id="cExp">-</b></div>
+      <div class="row"><span>Margin</span><b id="cMargin">-</b></div>
+      <div class="row"><span>Cash in hand so far</span><b id="cCash">-</b></div>
+      <div id="costList"></div>
+      <div class="note" id="costNone"></div>
+      <a class="btn ghost" id="newCost" href="#">Add expense for this job</a>
+    </div>
+  </details>
 
-  <div class="card">
-    <h2>Updates</h2>
-    <label class="field"><span>Add an update</span><textarea id="uText" rows="2" maxlength="1000" placeholder="e.g. Demo finished, waiting on permit"></textarea></label>
-    <label class="check" style="display:flex;gap:10px;align-items:center;margin:8px 0"><input type="checkbox" id="uShare" style="width:auto"><span>Show this to the customer in their portal (if they have one)</span></label>
-    <button class="btn ghost" id="uAdd" type="button">Add update</button>
-    <div id="uList"></div>
-    <div class="note" id="uMsg"></div>
-  </div>
+  <details class="sec">
+    <summary>Updates <small id="upSum"></small></summary>
+    <div class="in">
+      <label class="field"><span>Add an update</span><textarea id="uText" rows="2" maxlength="1000" placeholder="e.g. Demo finished, waiting on permit"></textarea></label>
+      <label class="check" style="display:flex;gap:10px;align-items:center;margin:8px 0"><input type="checkbox" id="uShare" style="width:auto"><span>Show to the customer in their portal</span></label>
+      <button class="btn ghost" id="uAdd" type="button">Add update</button>
+      <div class="note" id="uMsg"></div>
+      <div id="uList"></div>
+    </div>
+  </details>
 
-  <div class="card">
-    <a class="link" id="viewEst" href="#">View the original estimate</a>
-    <button class="link" id="bDel" type="button" style="display:none;color:#ff8a8a">Delete job</button>
-  </div>
+  <details class="more">
+    <summary>More &#9662;</summary>
+    <div class="in">
+      <a class="btn ghost" id="viewEst" href="#">View the original estimate</a>
+      <button class="btn ghost" id="bDel" type="button" style="display:none;color:#ff8a8a">Delete job</button>
+    </div>
+  </details>
 
   <a class="back" href="jobs.html">Back to jobs</a>
   <div class="note err" id="err"></div>
@@ -115,6 +125,7 @@
     if (job.customerPhone) lk('Call', 'tel:' + job.customerPhone);
     if (job.address) lk('Map', 'https://maps.google.com/?q=' + encodeURIComponent(job.address));
     if (job.customerId) lk('Customer', 'customer.html?id=' + job.customerId);
+    if (canManage) lk('Contract', 'documents.html?job=' + id);
     $('viewEst').href = 'estimate.html?id=' + (job.estimateId || id);
     $('newInv').href = 'invoice.html?estimate=' + (job.estimateId || id);
     $('newCost').href = 'expense.html?job=' + id + '&back=job';
@@ -123,7 +134,11 @@
     $('startDate').value = job.startDate || '';
     $('targetEndDate').value = job.targetEndDate || '';
     $('internalNotes').value = job.internalNotes || '';
-    if (canManage) $('bDel').style.display = 'block';
+    if (canManage) $('bDel').style.display = 'block'; else {
+      $('costSec').style.display = 'none'; $('invSec').style.display = 'none';
+      var stp = document.querySelector('.strip'); if (stp) stp.style.display = 'none';
+    }
+    $('progSum').textContent = job.status;
 
     function jmsg(t, c) { $('jMsg').textContent = t; $('jMsg').className = 'note ' + (c || ''); }
     vportal.exists(id).then(function (x) { if (x) vportal.syncJob(ctx, id, job).catch(function () {}); }).catch(function () {});
@@ -161,7 +176,7 @@
     });
 
     // ---------- invoices and money ----------
-    try {
+    if (canManage) try {
       var is = await ctx.bizRef.collection('invoices').where('estimateId', '==', id).get();
       var invs = is.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; });
       invs.sort(function (a, b) { return (a.number || '') < (b.number || '') ? -1 : 1; });
@@ -186,6 +201,7 @@
       });
       paidIn = paid;
       $('mContract').textContent = vutil.fmt(job.contractCents);
+      $('invSum').textContent = invs.length ? invs.length + (owed ? ' \u00b7 ' + vutil.fmt(owed) + ' due' : ' \u00b7 all paid') : 'none yet';
       $('mBilled').textContent = vutil.fmt(billed);
       $('mPaid').textContent = vutil.fmt(paid);
       $('mOwed').textContent = vutil.fmt(owed); if (owed) $('mOwed').className = 'late';
@@ -193,7 +209,7 @@
     } catch (e) { $('err').textContent = vyro.friendly(e); }
 
     // ---------- costs and profit ----------
-    try {
+    if (canManage) try {
       var xs = await ctx.bizRef.collection('expenses').where('jobId', '==', id).get();
       var xl = xs.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; });
       xl.sort(function (a, b) { return (a.date || '') < (b.date || '') ? 1 : -1; });
@@ -213,7 +229,7 @@
         $('costList').appendChild(row);
       });
       var expected = (job.contractCents || 0) - costAll;
-      $('cAll').textContent = vutil.fmt(costAll);
+      $('cAll').textContent = vutil.fmt(costAll); $('costSum').textContent = vutil.fmt(costAll) + ' spent';
       $('cExp').textContent = vutil.fmt(expected); if (expected < 0) $('cExp').className = 'late';
       $('cMargin').textContent = job.contractCents ? Math.round(expected / job.contractCents * 100) + '%' : '-';
       var cash = paidIn - costPaid;
@@ -225,6 +241,7 @@
       $('uList').textContent = '';
       try {
         var us = await jref.collection('updates').orderBy('createdAt', 'desc').get();
+        $('upSum').textContent = us.size ? String(us.size) : 'none yet';
         us.forEach(function (d) {
           var u = d.data();
           var when = u.createdAt && u.createdAt.toDate ? u.createdAt.toDate().toLocaleDateString() : '';
