@@ -143,6 +143,7 @@
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/util.js"></script>
+<script>window.VYRO_STAFF_ONLY = true;</script>
 <script src="js/auth.js"></script>
 <script>
   var TYPES = ['Labor', 'Materials', 'Other'];
@@ -258,6 +259,7 @@
     }
     $('cust').addEventListener('change', pickCustomer);
 
+    var milestone = '';
     // ---------- start from an estimate ----------
     function applyType(type) {
       var e = srcEst, n = e.number || 'estimate';
@@ -319,8 +321,18 @@
             $('cphone').value = srcEst.customerPhone || ''; $('caddr').value = srcEst.address || '';
             $('title').value = srcEst.title || '';
             $('btype').value = linkedTotal > 0 ? 'balance' : (srcEst.depositPct ? 'deposit' : 'full');
+            var mPct = parseInt(params.get('pct'), 10), mLabel = (params.get('label') || '').slice(0, 40);
+            if (mPct > 0 && mPct <= 100 && mLabel) {
+              milestone = mLabel;
+              $('btype').value = mPct === 100 ? 'full' : 'progress';
+              var mAmt = Math.round(srcEst.totalCents * mPct / 100);
+              setLines([{ type: 'Other', description: mLabel + ' (' + mPct + '%) for ' + (srcEst.number || 'estimate'), qty: 1, unitCents: mAmt }]);
+              $('discount').value = ''; $('taxPct').value = ''; recalc();
+              $('btype').addEventListener('change', function () { milestone = ''; applyType(this.value); });
+            } else {
             applyType($('btype').value);
             $('btype').addEventListener('change', function () { applyType(this.value); });
+            }
           }
         } catch (e) { $('err').textContent = vyro.friendly(e); }
       } else if (custParam && customers[custParam]) {
@@ -368,6 +380,7 @@
         customerId: $('cust').value || '', customerName: name, customerEmail: $('cemail').value.trim(),
         customerPhone: $('cphone').value.trim(), address: $('caddr').value.trim(),
         estimateId: estId, estimateNumber: srcEst ? srcEst.number : (inv ? inv.estimateNumber || '' : ''),
+        milestone: inv ? (inv.milestone || '') : milestone,
         billingType: srcEst && !inv ? $('btype').value : (inv ? inv.billingType || '' : ''),
         title: $('title').value.trim(), issueDate: $('issueDate').value, dueDate: $('dueDate').value,
         lineItems: items, discountCents: t.discountCents, taxPct: parseFloat($('taxPct').value) || 0,
@@ -377,7 +390,7 @@
         status: st, updatedAt: vyro.stamp()
       };
       if (newStatus === 'Sent' && status !== 'Sent') data.sentAt = vyro.stamp();
-      if (newStatus === 'Voided') data.voidedAt = vyro.stamp();
+      if (newStatus === 'Voided') { data.voidedAt = vyro.stamp(); vyro.audit(ctx, 'invoice voided', (inv && inv.number) || ''); }
 
       Array.prototype.forEach.call(document.querySelectorAll('.btn,.link'), function (b) { b.disabled = true; });
       say('Saving...');
@@ -472,7 +485,7 @@
     $('bVoid').addEventListener('click', function () { if (confirm('Void this invoice?')) save('Voided'); });
     $('bDel').addEventListener('click', async function () {
       if (!confirm('Delete this invoice permanently?')) return;
-      try { await col.doc(inv.id).delete(); location.href = 'invoices.html'; } catch (e) { say(vyro.friendly(e), 'err'); }
+      try { await col.doc(inv.id).delete(); await vyro.audit(ctx, 'invoice deleted', inv.number || inv.id); location.href = 'invoices.html'; } catch (e) { say(vyro.friendly(e), 'err'); }
     });
 
     // ---------- payments ----------
@@ -510,6 +523,7 @@
                   tx.update(d.ref, { reversed: true, reversedAt: vyro.stamp(), reversedBy: ctx.user.uid });
                   tx.update(iref, { paidCents: paid, status: deriveStatus(idata, paid), updatedAt: vyro.stamp() });
                 });
+                await vyro.audit(ctx, 'payment reversed', (inv.number || inv.id) + ' ' + vutil.fmt(p.amountCents));
                 location.replace('invoice.html?id=' + inv.id);
               } catch (e) { pmsg(vyro.friendly(e), 'err'); }
             });
@@ -538,6 +552,7 @@
             });
             tx.update(iref, { paidCents: paid, status: deriveStatus(d, paid), updatedAt: vyro.stamp() });
           });
+          await vyro.audit(ctx, 'payment recorded', (inv.number || inv.id) + ' ' + vutil.fmt(amt) + ' ' + $('payMethod').value);
           location.replace('invoice.html?id=' + inv.id);
         } catch (e) {
           pmsg(e && e.code === 'vyro/overpay' ? 'That is more than the balance due.' : vyro.friendly(e), 'err');
