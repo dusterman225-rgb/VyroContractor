@@ -7,6 +7,7 @@
 <title>Expense - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -29,7 +30,7 @@
       </label>
       <label class="field"><span>Amount ($)</span><input id="amount" type="text" inputmode="decimal" placeholder="0.00"></label>
       <label class="field"><span>Date</span><input id="date" type="date"></label>
-      <label class="field"><span>Receipt or reference number (optional)</span><input id="ref" type="text" maxlength="80"></label>
+      <label class="field"><span>Receipt or reference number</span><input id="ref" type="text" maxlength="80"></label>
     </div>
 
     <div class="card">
@@ -51,8 +52,8 @@
           <select id="method"><option>Cash</option><option>Check</option><option>Debit or credit card</option><option>Bank transfer</option><option>Other</option></select>
         </label>
       </div>
-      <label class="field"><span>Notes (optional)</span><textarea id="notes" rows="2" maxlength="1000"></textarea></label>
-      <div class="note">Receipt photos need paid storage, so for now write the receipt number above and keep the paper receipt.</div>
+      <label class="field"><span>Notes</span><textarea id="notes" rows="2" maxlength="1000"></textarea></label>
+      <div class="note">No receipt photos yet. Write the receipt number and keep the paper copy.</div>
     </div>
 
     <div class="card">
