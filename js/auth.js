@@ -101,8 +101,12 @@
     });
   }
   function redirectIfSignedIn() {
-    auth.onAuthStateChanged(function (u) {
-      if (u && !busy) { location.replace('app.html'); }
+    auth.onAuthStateChanged(async function (u) {
+      if (!u || busy) return;
+      // Contractors and team members go to the app; customers (no business) go to their portal.
+      var dest = 'app.html';
+      try { var d = await db.collection('users').doc(u.uid).get(); if (!d.exists || !d.data().bizId) dest = 'portal.html'; } catch (e) { /* default */ }
+      location.replace(dest);
     });
   }
 
@@ -130,6 +134,7 @@
         }
         await cb(ctx);
       } catch (err) {
+        if (err && err.code === 'vyro/no-business' && !/portal/.test(location.pathname)) { location.replace('portal.html'); return; }
         var e = document.getElementById('err');
         if (e) { e.textContent = friendly(err); }
       }
@@ -154,7 +159,7 @@
 
   // Help chat on every page. It remembers the conversation while the person moves between pages.
   try {
-    if (!window.__vyroHelpbot && !/assistant\.html$/.test(location.pathname)) {
+    if (!window.__vyroHelpbot && !/assistant(\.html)?\/?$/.test(location.pathname)) {
       var addScript = function (src, done) {
         var s = document.createElement('script'); s.src = src; if (done) s.onload = done; document.head.appendChild(s);
       };
