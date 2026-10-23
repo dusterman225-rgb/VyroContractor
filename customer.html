@@ -7,6 +7,7 @@
 <title>Customer - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -21,36 +22,45 @@
     <div class="nav" id="actions"></div>
   </div>
 
-  <div class="card">
-    <h2>Jobs</h2>
-    <div id="jobs"></div>
-    <div class="note" id="noJobs"></div>
-  </div>
+  <details class="sec" open>
+    <summary>Jobs <small id="jobSum"></small></summary>
+    <div class="in">
+      <div id="jobs"></div>
+      <div class="note" id="noJobs"></div>
+    </div>
+  </details>
 
-  <div class="card">
-    <h2>Estimates</h2>
-    <div id="ests"></div>
-    <div class="note" id="none"></div>
-    <a class="btn" id="newEst" href="#">New estimate</a>
-  </div>
+  <details class="sec">
+    <summary>Estimates <small id="estSum"></small></summary>
+    <div class="in">
+      <div id="ests"></div>
+      <div class="note" id="none"></div>
+      <a class="btn" id="newEst" href="#">New estimate</a>
+    </div>
+  </details>
 
-  <div class="card" id="portalCard">
-    <h2>Customer portal</h2>
-    <p id="pStat">Checking...</p>
-    <button class="btn" id="pMake" type="button" style="display:none">Create customer portal</button>
-    <button class="btn ghost" id="pResend" type="button" style="display:none">Email login link again</button>
-    <button class="btn ghost" id="pSync" type="button" style="display:none">Refresh what the customer sees</button>
-    <button class="link" id="pDel" type="button" style="display:none;color:#ff8a8a">Delete portal</button>
-    <div class="note">The customer sees status, dates, contract total, sent invoices and the updates you choose to share. Never your costs, profit or internal notes. They sign in at your site address + /portal-login.html. Archiving or deleting the customer deletes their portal.</div>
-    <div class="note" id="pMsg"></div>
-  </div>
+  <details class="sec" id="portalCard">
+    <summary>Customer portal <small id="portSum"></small></summary>
+    <div class="in">
+      <p id="pStat">Checking...</p>
+      <button class="btn" id="pMake" type="button" style="display:none">Create customer portal</button>
+      <button class="btn ghost" id="pResend" type="button" style="display:none">Email login link again</button>
+      <button class="btn ghost" id="pSync" type="button" style="display:none">Refresh what the customer sees</button>
+      <button class="btn ghost" id="pDel" type="button" style="display:none;color:#ff8a8a">Delete portal</button>
+      <div class="note">Customers never see costs, profit or internal notes. Archiving or deleting the customer deletes their portal.</div>
+      <div class="note" id="pMsg"></div>
+    </div>
+  </details>
 
-  <div class="card">
-    <button class="btn ghost" id="bArchive" type="button" style="display:none">Archive customer</button>
-    <button class="btn" id="bRestore" type="button" style="display:none">Restore to active customers</button>
-    <button class="link" id="bDelete" type="button" style="display:none;color:#ff8a8a">Delete customer</button>
-    <div class="note" id="aMsg"></div>
-  </div>
+  <details class="more">
+    <summary>More &#9662;</summary>
+    <div class="in">
+      <button class="btn ghost" id="bArchive" type="button" style="display:none">Archive customer</button>
+      <button class="btn" id="bRestore" type="button" style="display:none">Restore to active customers</button>
+      <button class="btn ghost" id="bDelete" type="button" style="display:none;color:#ff8a8a">Delete customer</button>
+      <div class="note" id="aMsg"></div>
+    </div>
+  </details>
 
   <a class="back" id="back" href="customers.html">Back to customers</a>
   <div class="note err" id="err"></div>
@@ -117,6 +127,7 @@
     // ---------- jobs ----------
     var jobList = [];
     try {
+      if ((c.email || '').trim() && !c.archived) { try { await vportal.findJobs(ctx, id, (c.email || '').trim().toLowerCase(), c.email); } catch (e0) { /* optional */ } }
       jobList = await vcascade.jobsOfCustomer(ctx.bizRef, id);
       jobList.sort(function (a, b) {
         var ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
@@ -124,6 +135,7 @@
         return tb - ta;
       });
       $('noJobs').textContent = jobList.length ? '' : 'No jobs for this customer yet.';
+      $('jobSum').textContent = jobList.length ? String(jobList.length) : 'none yet';
       jobList.forEach(function (j) {
         var r = vyro.el('div', 'item');
         var left = vyro.el('div', 'grow');
@@ -147,6 +159,7 @@
         return tb - ta;
       });
       $('none').textContent = list.length ? '' : 'No estimates for this customer yet.';
+      $('estSum').textContent = list.length ? String(list.length) : 'none yet';
       list.forEach(function (e) {
         var r = vyro.el('div', 'item');
         var left = vyro.el('div', 'grow');
@@ -170,16 +183,17 @@
         ['pMake', 'pResend', 'pSync', 'pDel'].forEach(function (b) { $(b).style.display = 'none'; });
         return;
       }
-      try { has = await vportal.hasForCustomer(ctx, id); } catch (e) { has = false; }
+      try { has = await vportal.hasForCustomer(ctx, id, em.toLowerCase(), em); } catch (e) { has = false; }
       $('pMake').style.display = !has && em ? 'block' : 'none';
       ['pResend', 'pSync', 'pDel'].forEach(function (b) { $(b).style.display = has ? 'block' : 'none'; });
+      $('portSum').textContent = has ? 'On' : 'Off';
       $('pStat').textContent = has ? 'Portal is on for ' + em + '.' :
         (em ? 'No portal yet for ' + em + '.' : 'Add an email to this customer first (tap Edit), then come back to create their portal.');
     }
     $('pMake').addEventListener('click', async function () {
       this.disabled = true; pmsg('Creating...');
       try {
-        var r = await vportal.ensureForCustomer(ctx, id, (c.email || '').trim().toLowerCase(), c.name);
+        var r = await vportal.ensureForCustomer(ctx, id, (c.email || '').trim().toLowerCase(), c.name, c.email);
         if (r && r.ok) pmsg('Done. ' + (r.emailed ? 'A link to set their password was emailed to ' + r.email + '.' : ''), '');
         else pmsg((r && r.message) || 'Could not create the portal.', 'err');
       } catch (e) { pmsg(vyro.friendly(e), 'err'); }
@@ -188,7 +202,7 @@
     $('pResend').addEventListener('click', async function () {
       this.disabled = true; pmsg('Sending...');
       try {
-        var r = await vportal.ensureForCustomer(ctx, id, (c.email || '').trim().toLowerCase(), c.name);
+        var r = await vportal.ensureForCustomer(ctx, id, (c.email || '').trim().toLowerCase(), c.name, c.email);
         pmsg(r && r.ok ? 'Sent a new login link to ' + r.email + '.' : ((r && r.message) || 'Could not send.'), r && r.ok ? '' : 'err');
       } catch (e) { pmsg(vyro.friendly(e), 'err'); }
       this.disabled = false;
@@ -240,5 +254,4 @@
   });
 </script>
 </body>
-    </html>
-  
+</html>
