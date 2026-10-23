@@ -7,6 +7,7 @@
 <title>Business profile - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -44,7 +45,7 @@
     var isOwner = ctx.role === 'owner';
     Object.keys(fields).forEach(function (k) {
       var input = document.getElementById(fields[k]);
-      input.value = ctx.biz[k] || '';
+      input.value = (k === 'license' ? (ctx.biz.license || ctx.biz.licenseNumber) : ctx.biz[k]) || '';
       input.disabled = !isOwner;
     });
     var save = document.getElementById('save');
@@ -58,6 +59,7 @@
       var data = {};
       Object.keys(fields).forEach(function (k) { data[k] = document.getElementById(fields[k]).value.trim(); });
       if (!data.name) { msg.textContent = 'Business name is required.'; msg.className = 'note err'; return; }
+      data.licenseNumber = data.license;
       data.updatedAt = vyro.stamp();
       save.disabled = true; msg.className = 'note'; msg.textContent = 'Saving...';
       try {
