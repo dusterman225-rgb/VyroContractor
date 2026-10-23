@@ -7,6 +7,7 @@
 <title>Leads - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -24,11 +25,10 @@
     </div>
     <button class="btn" id="add" type="button">Add lead</button>
 
-    <div class="card" id="srcCard" style="display:none">
-      <h2>Lead sources</h2>
-      <p>Won leads as a share of all leads from each source.</p>
-      <div id="sources"></div>
-    </div>
+    <details class="sec" id="srcCard" style="display:none">
+      <summary>Lead sources</summary>
+      <div class="in"><div id="sources"></div></div>
+    </details>
     <a class="back" href="app.html">Back to dashboard</a>
   </div>
 
@@ -37,15 +37,20 @@
     <label class="field"><span>Name</span><input id="name" type="text" maxlength="120" required></label>
     <label class="field"><span>Phone</span><input id="phone" type="tel" maxlength="40" autocomplete="off"></label>
     <label class="field"><span>Email</span><input id="email" type="email" maxlength="120" autocomplete="off"></label>
-    <label class="field"><span>Job address</span><textarea id="address" rows="2" maxlength="300"></textarea></label>
-    <label class="field"><span>Source</span><select id="source"></select></label>
+    <label class="field"><span>Job details</span><textarea id="jobDetails" rows="3" maxlength="1000" placeholder="What do they need done?"></textarea></label>
     <label class="field"><span>Status</span><select id="status"></select></label>
     <label class="field"><span>Follow up on</span><input id="followUp" type="date"></label>
-    <label class="field"><span>Job details</span><textarea id="jobDetails" rows="3" maxlength="1000" placeholder="What do they need done?"></textarea></label>
-    <label class="field"><span>Notes</span><textarea id="notes" rows="3" maxlength="1000"></textarea></label>
+    <details class="more">
+      <summary>More details</summary>
+      <div class="in">
+        <label class="field"><span>Job address</span><textarea id="address" rows="2" maxlength="300"></textarea></label>
+        <label class="field"><span>Source</span><select id="source"></select></label>
+        <label class="field"><span>Notes</span><textarea id="notes" rows="3" maxlength="1000"></textarea></label>
+      </div>
+    </details>
     <button class="btn" id="save" type="submit">Save lead</button>
     <button class="btn ghost" id="toCustomer" type="button" style="display:none">Create customer from this lead</button>
-        <a class="btn ghost" id="toEstimate" href="#" style="display:none">Create estimate for this lead</a>
+    <a class="btn ghost" id="toEstimate" href="#" style="display:none">Create estimate for this lead</a>
     <button class="btn ghost" id="cancel" type="button">Cancel</button>
     <button class="link" id="del" type="button" style="display:none;color:#ff8a8a">Delete lead</button>
     <div class="note" id="msg"></div>
@@ -76,7 +81,8 @@
   vyro.start(function (ctx) {
     var col = ctx.bizRef.collection('leads');
     var canDelete = ctx.role === 'owner' || ctx.role === 'supervisor';
-    var all = [], filter = 'All', editing = null;
+    var all = [], filter = 'Open', editing = null;
+    function inTab(x, t) { return t === 'Open' ? ['New', 'Contacted', 'Estimate Sent'].indexOf(x.status) > -1 : x.status === t; }
 
     function showList() { $('form').style.display = 'none'; $('listView').style.display = 'block'; $('msg').textContent = ''; }
     function showForm(l) {
@@ -103,8 +109,8 @@
 
     function renderTabs() {
       var box = $('tabs'); box.textContent = '';
-      ['All'].concat(STATUSES).forEach(function (s) {
-        var n = s === 'All' ? all.length : all.filter(function (x) { return x.status === s; }).length;
+      ['Open', 'Won', 'Lost'].forEach(function (s) {
+        var n = all.filter(function (x) { return inTab(x, s); }).length;
         var b = vyro.el('button', 'tab' + (filter === s ? ' on' : ''), s + ' ' + n);
         b.type = 'button';
         b.addEventListener('click', function () { filter = s; render(); });
@@ -136,7 +142,7 @@
       var today = todayStr();
       var box = $('list'); box.textContent = '';
       var shown = all.filter(function (l) {
-        if (filter !== 'All' && l.status !== filter) return false;
+        if (!inTab(l, filter)) return false;
         if (!q) return true;
         return (l.name || '').toLowerCase().indexOf(q) > -1 ||
                (l.email || '').toLowerCase().indexOf(q) > -1 ||
@@ -241,7 +247,7 @@
       catch (err) { $('msg').textContent = vyro.friendly(err); $('msg').className = 'note err'; }
     });
 
-    load();
+    load().then(function () { if (new URLSearchParams(location.search).get('new') === '1') showForm(null); });
   });
 </script>
 </body>
