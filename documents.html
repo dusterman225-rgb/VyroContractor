@@ -21,7 +21,7 @@
       <h2>Contracts</h2>
       <div id="cList"></div>
       <div class="note" id="cNone"></div>
-      <button class="btn" id="newC" type="button">New contract or change order</button>
+      <button class="btn" id="newC" type="button">New contract, change order or waiver</button>
     </div>
 
     <details class="sec">
@@ -92,6 +92,14 @@
           s = await tplCol.get();
         } catch (e) { /* optional */ }
       }
+      var extras = [['lien-waiver', 'VYRO_LIEN_WAIVER_DEFAULT'], ['final-receipt', 'VYRO_FINAL_RECEIPT_DEFAULT']];
+      for (var xi = 0; xi < extras.length; xi++) {
+        var ex = extras[xi];
+        if (!s.docs.some(function (d) { return d.id === ex[0]; }) && window[ex[1]]) {
+          try { await tplCol.doc(ex[0]).set({ name: window[ex[1]].name, body: window[ex[1]].body, createdAt: vyro.stamp(), updatedAt: vyro.stamp() }); } catch (e) { /* optional */ }
+        }
+      }
+      s = await tplCol.get();
       templates = s.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; });
       $('tList').textContent = '';
       templates.forEach(function (t) {
@@ -164,7 +172,7 @@
         var t = templates.filter(function (x) { return x.id === tid; })[0];
         var f = await vcontract.fill(ctx, jid, t.body);
         var ref = await conCol.add({
-          jobId: jid, customerName: f.job.customerName || '', title: (/change order/i.test(t.name) ? 'Change order - ' : 'Contract - ') + (f.job.title || ('Estimate ' + (f.job.estimateNumber || ''))),
+          jobId: jid, customerName: f.job.customerName || '', title: (/change order/i.test(t.name) ? 'Change order - ' : /lien/i.test(t.name) ? 'Lien waiver - ' : /receipt/i.test(t.name) ? 'Receipt - ' : 'Contract - ') + (f.job.title || ('Estimate ' + (f.job.estimateNumber || ''))),
           templateName: t.name, body: f.text, status: 'Draft', createdAt: vyro.stamp(), updatedAt: vyro.stamp(), createdBy: ctx.user.uid
         });
         location.href = 'contract.html?id=' + ref.id;
