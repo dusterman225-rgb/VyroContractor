@@ -126,3 +126,66 @@ window.VYRO_CHANGE_ORDER_DEFAULT = {
 'Printed name and title: {{contractor_name}}, {{contractor_title}}     License no. {{license_number}}'
   ].join('\n')
 };
+
+
+// Lien waiver and release and final payment receipt: starter wording only.
+// These are NOT official statutory forms. Several states (for example California, Texas, Florida, Arizona)
+// require exact statutory wording for lien releases. Have an attorney review before use.
+window.VYRO_LIEN_WAIVER_DEFAULT = {
+  id: 'lien-waiver',
+  name: 'Lien waiver and release (starter, attorney review required)',
+  body: [
+'LIEN WAIVER AND RELEASE',
+'',
+'Date: {{contract_date}}',
+'Project: {{project_title}}',
+'Property address: {{job_address}}',
+'Owner: {{customer_name}}',
+'Contractor: {{business_name}}, represented by {{contractor_name}}, {{contractor_title}}     License no. {{license_number}}',
+'',
+'[Choose one and delete the other: CONDITIONAL on receipt of payment / UNCONDITIONAL because payment has been received]',
+'',
+'1. PAYMENT',
+'The Contractor has received, or on receipt of payment will have received, payment in the amount of [amount] for work and materials furnished through [date]. Total paid on this project to date, including this payment: {{paid_to_date}}.',
+'',
+'2. RELEASE',
+'Upon receipt of the payment described above, the Contractor releases the Owner and the property from any mechanic\'s lien, stop notice or claim for payment for the labor, services, equipment and materials furnished by the Contractor through the date above. This release covers only the payment described in section 1 [PROGRESS PAYMENT: it does not cover work after the date above, or retention or disputed claims listed below].',
+'',
+'Exceptions (amounts not released): [none / list]',
+'',
+'3. SUBCONTRACTORS AND SUPPLIERS',
+'The Contractor states that all subcontractors and suppliers have been paid for work and materials covered by this payment, except: [none / list].',
+'',
+'4. SIGNATURE',
+'',
+'Contractor signature: __________________________     Date: ______________',
+'Printed name and title: {{contractor_name}}, {{contractor_title}}',
+'',
+'NOTE: This is a starter template and is not a statutory form. Many states require exact wording or a notary. Have an attorney review it for your state before you use it.'
+  ].join('\n')
+};
+
+window.VYRO_FINAL_RECEIPT_DEFAULT = {
+  id: 'final-receipt',
+  name: 'Final payment receipt (starter)',
+  body: [
+'FINAL PAYMENT RECEIPT',
+'',
+'Date: {{contract_date}}',
+'Received from: {{customer_name}}',
+'Project: {{project_title}}',
+'Property address: {{job_address}}',
+'Contractor: {{business_name}}     License no. {{license_number}}',
+'',
+'Contract price: {{contract_total}}',
+'Total received to date: {{paid_to_date}}',
+'Balance remaining: {{balance_due}}',
+'',
+'Final payment received today: [amount]     Method: [cash / check no. / card / Vyro crypto]',
+'',
+'The Contractor acknowledges receipt of the payment above. [If the balance remaining is $0.00: This receipt confirms the contract has been paid in full.]',
+'',
+'Contractor signature: __________________________     Date: ______________',
+'Printed name and title: {{contractor_name}}, {{contractor_title}}'
+  ].join('\n')
+};
