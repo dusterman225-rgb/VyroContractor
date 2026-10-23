@@ -100,7 +100,13 @@
     $('mWho').textContent = ctx.role + ' \u00b7 ' + ctx.user.email;
     if (ctx.role === 'owner') { $('miFin').style.display = 'block'; $('miPay').style.display = 'block'; }
     if (canMoney) $('miDoc').style.display = 'block';
-    else {
+    if (ctx.role === 'employee') {
+      var qa = document.querySelector('.qa');
+      if (qa) { qa.textContent = ''; [['New lead', 'leads.html?new=1'], ['Jobs', 'jobs.html'], ['Messages', 'messages.html']].forEach(function (x) { var a = vyro.el('a', 'btn', x[0]); a.href = x[1]; qa.appendChild(a); }); }
+      var ah = document.querySelector('#attBody') && document.querySelector('#attBody').parentNode.querySelector('h2');
+      if (ah) ah.textContent = 'Your work';
+    }
+    if (!canMoney) {
       var mg = $('mgMoney'); if (mg && mg.parentNode) mg.parentNode.style.display = 'none';
       Array.prototype.forEach.call(document.querySelectorAll('.qa a'), function (a) { if (/invoice/.test(a.getAttribute('href') || '')) a.style.display = 'none'; });
     }
@@ -175,7 +181,7 @@
       ]],
       ['Work', [
         n.jobs > 0 && ['Active jobs', n.jobs, 'jobs.html', false],
-        n.sent > 0 && ['Estimates waiting for a reply', n.sent, 'estimates.html', false]
+        n.sent > 0 && canMoney && ['Estimates waiting for a reply', n.sent, 'estimates.html', false]
       ]],
       ['Leads', [
         n.newLeads > 0 && ['New leads', n.newLeads + (n.staleLeads ? ' (' + n.staleLeads + ' waiting 2+ days)' : ''), 'leads.html', n.staleLeads > 0],
