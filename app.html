@@ -33,12 +33,15 @@
           <summary class="mg" id="mgMoney">Money</summary>
           <a class="mi" href="invoices.html">Invoices</a>
           <a class="mi" href="expenses.html">Expenses and bills</a>
+          <a class="mi" id="miRec" href="recurring.html">Recurring bills</a>
           <a class="mi" id="miFin" href="finances.html" style="display:none">Finances</a>
           <a class="mi" id="miPay" href="paysettings.html" style="display:none">Pay with Vyro</a>
         </details>
         <details>
           <summary class="mg">Tools</summary>
           <a class="mi" id="miDoc" href="documents.html" style="display:none">Documents</a>
+          <a class="mi" href="timelog.html">Time and mileage</a>
+          <a class="mi" id="miSub" href="subs.html">Subcontractors</a>
           <a class="mi" href="assistant.html">Assistant</a>
         </details>
         <details>
@@ -85,6 +88,7 @@
 <script src="js/util.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/calendar.js"></script>
+<script src="js/recur.js"></script>
 <script src="js/public.js"></script>
 <script>
   var $ = function (id) { return document.getElementById(id); };
@@ -106,7 +110,10 @@
     $('mWho').textContent = ctx.role + ' \u00b7 ' + ctx.user.email;
     if (ctx.role === 'owner') { $('miFin').style.display = 'block'; $('miPay').style.display = 'block'; }
     if (canMoney) $('miDoc').style.display = 'block';
-    try { vcal.mount(ctx, $('calBox')); } catch (e) { $('calSec').style.display = 'none'; }
+    if (!canMoney) $('miSub').style.display = 'none';
+    var recurDone = Promise.resolve();
+    if (canMoney && window.vrecur) recurDone = vrecur.run(ctx).catch(function () { /* optional */ });
+    recurDone.then(function () { try { vcal.mount(ctx, $('calBox')); } catch (e) { $('calSec').style.display = 'none'; } });
     if (ctx.role === 'employee') {
       var qa = document.querySelector('.qa');
       if (qa) { qa.textContent = ''; [['New lead', 'leads.html?new=1'], ['Jobs', 'jobs.html'], ['Messages', 'messages.html']].forEach(function (x) { var a = vyro.el('a', 'btn', x[0]); a.href = x[1]; qa.appendChild(a); }); }
