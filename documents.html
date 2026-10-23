@@ -21,7 +21,7 @@
       <h2>Contracts</h2>
       <div id="cList"></div>
       <div class="note" id="cNone"></div>
-      <button class="btn" id="newC" type="button">New contract for a job</button>
+      <button class="btn" id="newC" type="button">New contract or change order</button>
     </div>
 
     <details class="sec">
@@ -85,6 +85,12 @@
       if (s.empty) {
         await tplCol.doc('starter').set({ name: VYRO_CONTRACT_DEFAULT.name, body: VYRO_CONTRACT_DEFAULT.body, createdAt: vyro.stamp(), updatedAt: vyro.stamp() });
         s = await tplCol.get();
+      }
+      if (!s.docs.some(function (d) { return d.id === 'change-order'; })) {
+        try {
+          await tplCol.doc('change-order').set({ name: VYRO_CHANGE_ORDER_DEFAULT.name, body: VYRO_CHANGE_ORDER_DEFAULT.body, createdAt: vyro.stamp(), updatedAt: vyro.stamp() });
+          s = await tplCol.get();
+        } catch (e) { /* optional */ }
       }
       templates = s.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; });
       $('tList').textContent = '';
@@ -158,7 +164,7 @@
         var t = templates.filter(function (x) { return x.id === tid; })[0];
         var f = await vcontract.fill(ctx, jid, t.body);
         var ref = await conCol.add({
-          jobId: jid, customerName: f.job.customerName || '', title: 'Contract - ' + (f.job.title || ('Estimate ' + (f.job.estimateNumber || ''))),
+          jobId: jid, customerName: f.job.customerName || '', title: (/change order/i.test(t.name) ? 'Change order - ' : 'Contract - ') + (f.job.title || ('Estimate ' + (f.job.estimateNumber || ''))),
           templateName: t.name, body: f.text, status: 'Draft', createdAt: vyro.stamp(), updatedAt: vyro.stamp(), createdBy: ctx.user.uid
         });
         location.href = 'contract.html?id=' + ref.id;
