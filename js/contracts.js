@@ -17,7 +17,11 @@
       return '  - ' + (it.description || '') + ' (qty ' + it.qty + ', ' + vutil.fmt(Math.round(it.qty * it.unitCents)) + ')';
     }).join('\n');
     var dep = job.depositPct ? Math.round((job.contractCents || 0) * job.depositPct / 100) : 0;
+    // The contractor is the person on the team account making the document.
+    var me = ctx.me || {};
+    var roleLabel = { owner: 'Owner', supervisor: 'Supervisor', employee: 'Team member' }[ctx.role] || '';
     var map = {
+      contractor_name: me.name, contractor_title: roleLabel,
       contract_date: longDate(vutil.todayStr()), estimate_number: job.estimateNumber || '',
       business_name: b.name, business_address: b.address || b.businessAddress, business_phone: b.phone, business_email: b.email,
       license_number: b.licenseNumber || b.license,
@@ -28,6 +32,12 @@
       deposit_amount: dep ? vutil.fmt(dep) : '[down payment amount]',
       start_date: longDate(job.startDate), target_end_date: longDate(job.targetEndDate)
     };
+    // Templates saved before this change: fill the contractor's printed name and title in too.
+    if (map.contractor_name && templateBody.indexOf('{{contractor_name}}') < 0) {
+      templateBody = templateBody
+        .replace('Contractor: {{business_name}},', 'Contractor: {{business_name}}, represented by {{contractor_name}}, {{contractor_title}},')
+        .replace(/Printed name and title: _+/, 'Printed name and title: {{contractor_name}}, {{contractor_title}}');
+    }
     var text = templateBody.replace(/\{\{(\w+)\}\}/g, function (m, k) {
       var v = map[k]; return (v !== undefined && v !== null && String(v).trim()) ? String(v) : '[' + k.replace(/_/g, ' ') + ']';
     });
