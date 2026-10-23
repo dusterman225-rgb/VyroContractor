@@ -20,7 +20,16 @@
     // The contractor is the person on the team account making the document.
     var me = ctx.me || {};
     var roleLabel = { owner: 'Owner', supervisor: 'Supervisor', employee: 'Team member' }[ctx.role] || '';
+    // Money already received on this job (staff only; leave blank if invoices can't be read).
+    var paidSum = null, billedSum = 0;
+    try {
+      var iv = await ctx.bizRef.collection('invoices').where('estimateId', '==', job.estimateId || jobId).get();
+      paidSum = 0;
+      iv.forEach(function (d) { var x = d.data(); if (x.status !== 'Voided') { paidSum += x.paidCents || 0; billedSum += x.totalCents || 0; } });
+    } catch (e) { paidSum = null; }
     var map = {
+      paid_to_date: paidSum === null ? '' : vutil.fmt(paidSum),
+      balance_due: paidSum === null ? '' : vutil.fmt(Math.max(0, (job.contractCents || 0) - paidSum)),
       contractor_name: me.name, contractor_title: roleLabel,
       contract_date: longDate(vutil.todayStr()), estimate_number: job.estimateNumber || '',
       business_name: b.name, business_address: b.address || b.businessAddress, business_phone: b.phone, business_email: b.email,
