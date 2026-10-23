@@ -7,6 +7,7 @@
 <title>Expenses - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -15,10 +16,10 @@
     <div class="tag">Expenses and bills</div>
   </div>
 
-  <div class="card totals">
-    <div class="row"><span>Spent this month</span><b id="sMonth">-</b></div>
-    <div class="row"><span>Bills you still owe</span><b id="sOwe">-</b></div>
-    <div class="row"><span>Overdue bills</span><b id="sOver">-</b></div>
+  <div class="strip">
+    <div><small>This month</small><b id="sMonth">-</b></div>
+    <div><small>Owed</small><b id="sOwe">-</b></div>
+    <div><small>Overdue</small><b id="sOver">-</b></div>
   </div>
 
   <div class="tabs" id="tabs"></div>
@@ -37,9 +38,10 @@
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/util.js"></script>
+<script>window.VYRO_STAFF_ONLY = true;</script>
 <script src="js/auth.js"></script>
 <script>
-  var TABS = ['All', 'Unpaid', 'Overdue', 'Paid'];
+  var TABS = ['All', 'Unpaid', 'Paid'];
   var $ = function (id) { return document.getElementById(id); };
   var today = vutil.todayStr();
   function disp(x) { return x.status === 'Unpaid' && x.dueDate && x.dueDate < today ? 'Overdue' : x.status; }
