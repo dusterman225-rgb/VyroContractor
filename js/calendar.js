@@ -8,9 +8,10 @@
     invoice: { label: 'Invoice due',    color: '#f0c36d' },
     bill:    { label: 'Bill due',       color: '#ff8a8a' },
     lead:    { label: 'Lead follow-up', color: '#b48cff' },
+    sub:     { label: 'Sub licence/insurance', color: '#4fd6d0' },
     mine:    { label: 'My dates',       color: '#ff7ad9' }
   };
-  var ORDER = ['invoice', 'bill', 'start', 'end', 'lead', 'mine'];
+  var ORDER = ['invoice', 'bill', 'sub', 'start', 'end', 'lead', 'mine'];
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   function pad(n) { return String(n).padStart(2, '0'); }
@@ -58,6 +59,13 @@
             var i = d.data(); if (i.status !== 'Sent' && i.status !== 'Partially Paid') return;
             var bal = (i.totalCents || 0) - (i.paidCents || 0);
             add(i.dueDate, 'invoice', (i.customerName || 'Invoice') + ' · ' + (i.number || ''), vutil.fmt(bal) + ' due' + (i.dueDate < today ? ' (overdue)' : ''), 'invoice.html?id=' + d.id);
+          });
+        }));
+        jobs.push(ctx.bizRef.collection('subs').get().then(function (s) {
+          s.forEach(function (d) {
+            var x = d.data();
+            add(x.licenseExpires, 'sub', (x.name || 'Subcontractor') + ' \u00b7 licence expires', x.trade || '', 'subs.html');
+            add(x.insuranceExpires, 'sub', (x.name || 'Subcontractor') + ' \u00b7 insurance expires', x.trade || '', 'subs.html');
           });
         }));
         jobs.push(ctx.bizRef.collection('expenses').where('status', '==', 'Unpaid').get().then(function (s) {
@@ -115,7 +123,7 @@
 
       var legend = el('div', 'cal-legend');
       ORDER.forEach(function (k) {
-        if (!staff && (k === 'invoice' || k === 'bill')) return;
+        if (!staff && (k === 'invoice' || k === 'bill' || k === 'sub')) return;
         var l = el('span'); var dot = el('i'); dot.style.background = TYPES[k].color; l.appendChild(dot); l.appendChild(document.createTextNode(TYPES[k].label)); legend.appendChild(l);
       });
       box.appendChild(legend);
