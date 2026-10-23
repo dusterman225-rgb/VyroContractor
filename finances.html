@@ -7,6 +7,7 @@
 <title>Finances - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -32,41 +33,51 @@
       <div class="row"><span>Profit margin</span><b id="fMargin">-</b></div>
     </div>
 
-    <div class="card">
-      <h2>Earnings</h2>
-      <div id="incomeList"></div>
-      <div class="row"><span>Invoiced in this period</span><b id="fBilled">-</b></div>
-      <div class="row"><span>Sales tax on those invoices</span><b id="fTax">-</b></div>
-    </div>
+    <details class="sec">
+      <summary>Earnings</summary>
+      <div class="in">
+        <div id="incomeList"></div>
+        <div class="row"><span>Invoiced in this period</span><b id="fBilled">-</b></div>
+        <div class="row"><span>Sales tax on those invoices</span><b id="fTax">-</b></div>
+      </div>
+    </details>
 
-    <div class="card">
-      <h2>Expenses by category</h2>
-      <div id="catList"></div>
-      <div class="note" id="catNone"></div>
-    </div>
+    <details class="sec">
+      <summary>Expenses by category</summary>
+      <div class="in">
+        <div id="catList"></div>
+        <div class="note" id="catNone"></div>
+      </div>
+    </details>
 
-    <div class="card">
-      <h2>Vyro fees</h2>
-      <div class="row"><span>Vyro monthly fee</span><b id="vSub">-</b></div>
-      <div class="row"><span>Pay with Vyro payments received</span><b id="vCount">-</b></div>
-      <div class="row"><span>Vyro transaction fees (<span id="vPct"></span>%)</span><b id="vFees">-</b></div>
-      <div class="note" id="vNote"></div>
-    </div>
+    <details class="sec">
+      <summary>Vyro fees</summary>
+      <div class="in">
+        <div class="row"><span>Vyro monthly fee</span><b id="vSub">-</b></div>
+        <div class="row"><span>Pay with Vyro payments</span><b id="vCount">-</b></div>
+        <div class="row"><span>Transaction fees (<span id="vPct"></span>%)</span><b id="vFees">-</b></div>
+        <div class="note" id="vNote"></div>
+      </div>
+    </details>
 
-    <div class="card">
-      <h2>Right now</h2>
-      <div class="row"><span>Customers owe you</span><b id="nOwed">-</b></div>
-      <div class="row"><span>You owe in unpaid bills</span><b id="nBills">-</b></div>
-    </div>
+    <details class="sec">
+      <summary>Owed right now</summary>
+      <div class="in">
+        <div class="row"><span>Customers owe you</span><b id="nOwed">-</b></div>
+        <div class="row"><span>You owe in unpaid bills</span><b id="nBills">-</b></div>
+      </div>
+    </details>
 
-    <div class="card">
-      <h2>Tax documents</h2>
-      <a class="btn" id="bReport" href="#">Prepare tax report</a>
-      <button class="btn ghost" id="bCsv" type="button">Download spreadsheet (CSV)</button>
-      <button class="btn ghost" id="bCopy" type="button">Copy summary as text</button>
-      <div class="note" id="dMsg"></div>
-      <div class="note">Cash basis. Prepared from what you entered in Vyro. This is not tax advice, so review it with a tax professional.</div>
-    </div>
+    <details class="sec">
+      <summary>Tax documents</summary>
+      <div class="in">
+        <a class="btn" id="bReport" href="#">Prepare tax report</a>
+        <button class="btn ghost" id="bCsv" type="button">Download spreadsheet (CSV)</button>
+        <button class="btn ghost" id="bCopy" type="button">Copy summary as text</button>
+        <div class="note" id="dMsg"></div>
+        <div class="note">Cash basis. Not tax advice.</div>
+      </div>
+    </details>
   </div>
 
   <a class="back" href="app.html">Back to dashboard</a>
@@ -124,8 +135,7 @@
       $('vSub').textContent = vfin.money(m.vyroSub);
       $('vCount').textContent = m.vyroCount ? m.vyroCount + ' (' + vfin.money(m.vyroGross) + ')' : '0';
       $('vPct').textContent = vfin.VYRO_TX_FEE_PCT; $('vFees').textContent = vfin.money(m.vyroFees);
-      $('vNote').textContent = (vfin.VYRO_MONTHLY_FEE_CENTS ? '' : 'The Vyro subscription is free during launch. ') +
-        (m.vyroCount ? '' : 'Pay with Vyro is not live yet, so there are no Vyro transactions. Real ones will appear here automatically once it launches. They are never typed in by hand.');
+      $('vNote').textContent = vfin.VYRO_MONTHLY_FEE_CENTS ? '' : 'The Vyro subscription is free during launch.';
 
       $('nOwed').textContent = vfin.money(m.owed); $('nBills').textContent = vfin.money(m.billsOwed);
       $('bReport').href = 'finances-report.html?period=' + key;
