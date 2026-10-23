@@ -59,6 +59,11 @@
     <a class="btn" href="invoice.html">New invoice</a>
   </div>
 
+  <details class="sec" id="calSec" open>
+    <summary>Calendar</summary>
+    <div class="in" id="calBox"></div>
+  </details>
+
   <div class="card" id="acceptedBanner" style="display:none">
     <h2>Accepted online</h2>
     <p id="acceptedText"></p>
@@ -79,6 +84,7 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/util.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/calendar.js"></script>
 <script src="js/public.js"></script>
 <script>
   var $ = function (id) { return document.getElementById(id); };
@@ -100,6 +106,7 @@
     $('mWho').textContent = ctx.role + ' \u00b7 ' + ctx.user.email;
     if (ctx.role === 'owner') { $('miFin').style.display = 'block'; $('miPay').style.display = 'block'; }
     if (canMoney) $('miDoc').style.display = 'block';
+    try { vcal.mount(ctx, $('calBox')); } catch (e) { $('calSec').style.display = 'none'; }
     if (ctx.role === 'employee') {
       var qa = document.querySelector('.qa');
       if (qa) { qa.textContent = ''; [['New lead', 'leads.html?new=1'], ['Jobs', 'jobs.html'], ['Messages', 'messages.html']].forEach(function (x) { var a = vyro.el('a', 'btn', x[0]); a.href = x[1]; qa.appendChild(a); }); }
