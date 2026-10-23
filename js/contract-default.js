@@ -8,7 +8,7 @@ window.VYRO_CONTRACT_DEFAULT = {
 'Contract date: {{contract_date}}        Estimate no.: {{estimate_number}}',
 '',
 '1. PARTIES',
-'Contractor: {{business_name}}, {{business_address}}, phone {{business_phone}}, email {{business_email}}, contractor license no. {{license_number}}.',
+'Contractor: {{business_name}}, represented by {{contractor_name}}, {{contractor_title}}, {{business_address}}, phone {{business_phone}}, email {{business_email}}, contractor license no. {{license_number}}.',
 'Owner: {{customer_name}}, {{customer_address}}, phone {{customer_phone}}, email {{customer_email}}.',
 '',
 '2. PROJECT AND LOCATION',
@@ -79,6 +79,50 @@ window.VYRO_CONTRACT_DEFAULT = {
 '',
 '',
 'Contractor signature: __________________________     Date: ______________',
-'Printed name and title: ________________________     License no. {{license_number}}'
+'Printed name and title: {{contractor_name}}, {{contractor_title}}     License no. {{license_number}}'
+  ].join('\n')
+};
+
+
+// Change order: a signed written change to the work, price or schedule of an existing contract.
+// Have an attorney review it. Many states require change orders to be in writing and signed by both parties before the changed work begins.
+window.VYRO_CHANGE_ORDER_DEFAULT = {
+  id: 'change-order',
+  name: 'Change order (starter)',
+  body: [
+'CHANGE ORDER',
+'',
+'Change order no.: [number]        Date: {{contract_date}}',
+'',
+'1. THE ORIGINAL CONTRACT',
+'This Change Order changes the home improvement contract between {{business_name}} (the "Contractor"), represented by {{contractor_name}}, {{contractor_title}}, and {{customer_name}} (the "Owner"), dated [date of original contract] (estimate no. {{estimate_number}}), for the project "{{project_title}}" at {{job_address}} (the "Contract").',
+'',
+'2. DESCRIPTION OF THE CHANGE',
+'The Owner and the Contractor agree to the following change to the Work:',
+'[Describe exactly what is being added, removed or changed. Include materials, quantities and locations.]',
+'',
+'3. EFFECT ON THE CONTRACT PRICE',
+'Original Contract Price: {{contract_total}}',
+'Previous change orders (if any): [amount]',
+'This change order: [add / deduct] [amount]',
+'New Contract Price: [amount]',
+'',
+'4. EFFECT ON THE SCHEDULE',
+'The completion date in the Contract was {{target_end_date}}. This change [does not change / adds [number] days to] the schedule. The new target completion date is [date].',
+'',
+'5. PAYMENT FOR THIS CHANGE',
+'The amount for this change order is due [with the signing of this change order / on completion of the changed work / with the next progress payment: describe].',
+'',
+'6. EVERYTHING ELSE STAYS THE SAME',
+'All other terms of the Contract remain in effect. If this Change Order conflicts with the Contract, this Change Order controls for the change described above. The changed work will not begin until both parties have signed this Change Order.',
+'',
+'7. SIGNATURES',
+'',
+'Owner signature: ______________________________     Date: ______________',
+'Printed name: {{customer_name}}',
+'',
+'',
+'Contractor signature: __________________________     Date: ______________',
+'Printed name and title: {{contractor_name}}, {{contractor_title}}     License no. {{license_number}}'
   ].join('\n')
 };
