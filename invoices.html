@@ -7,6 +7,7 @@
 <title>Invoices - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -15,12 +16,12 @@
     <div class="tag">Invoices</div>
   </div>
 
-  <div class="card totals">
-    <div class="row"><span>Invoiced</span><b id="sInv">-</b></div>
-    <div class="row"><span>Collected</span><b id="sCol">-</b></div>
-    <div class="row"><span>Outstanding</span><b id="sOut">-</b></div>
-    <div class="row"><span>Overdue</span><b id="sOver">-</b></div>
+  <div class="strip">
+    <div><small>Collected</small><b id="sCol">-</b></div>
+    <div><small>Outstanding</small><b id="sOut">-</b></div>
+    <div><small>Overdue</small><b id="sOver">-</b></div>
   </div>
+  <span id="sInv" style="display:none"></span>
 
   <div class="tabs" id="tabs"></div>
   <div class="card" style="margin-top:0">
@@ -40,7 +41,13 @@
 <script src="js/util.js"></script>
 <script src="js/auth.js"></script>
 <script>
-  var TABS = ['All', 'Draft', 'Sent', 'Partially Paid', 'Overdue', 'Paid', 'Voided'];
+  var TABS = ['Unpaid', 'Draft', 'Paid', 'All'];
+  function inTab(i, t) {
+    var d = disp(i);
+    if (t === 'All') return true;
+    if (t === 'Unpaid') return d === 'Sent' || d === 'Partially Paid' || d === 'Overdue';
+    return d === t;
+  }
   var $ = function (id) { return document.getElementById(id); };
   var today = vutil.todayStr();
   function disp(i) {
@@ -50,12 +57,12 @@
   function cls(s) { return s.replace(' ', ''); }
 
   vyro.start(async function (ctx) {
-    var all = [], filter = 'All';
+    var all = [], filter = 'Unpaid';
 
     function render() {
       var tabs = $('tabs'); tabs.textContent = '';
       TABS.forEach(function (s) {
-        var n = s === 'All' ? all.length : all.filter(function (x) { return disp(x) === s; }).length;
+        var n = all.filter(function (x) { return inTab(x, s); }).length;
         var b = vyro.el('button', 'tab' + (filter === s ? ' on' : ''), s + ' ' + n); b.type = 'button';
         b.addEventListener('click', function () { filter = s; render(); });
         tabs.appendChild(b);
@@ -78,7 +85,7 @@
       var q = $('q').value.trim().toLowerCase();
       var box = $('list'); box.textContent = '';
       var shown = all.filter(function (i) {
-        if (filter !== 'All' && disp(i) !== filter) return false;
+        if (!inTab(i, filter)) return false;
         if (!q) return true;
         return (i.customerName || '').toLowerCase().indexOf(q) > -1 ||
                (i.title || '').toLowerCase().indexOf(q) > -1 ||
