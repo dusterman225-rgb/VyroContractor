@@ -7,6 +7,7 @@
 <title>Customers - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -16,13 +17,13 @@
   </div>
 
   <div id="listView">
+    <div class="tabs"><a class="on" href="customers.html">Active</a><a id="viewArch" href="archived.html">Archived</a></div>
     <div class="card">
       <input class="search" id="q" type="search" placeholder="Search name, phone or email" autocomplete="off">
       <div id="list"></div>
       <div class="note" id="empty"></div>
     </div>
     <button class="btn" id="add" type="button">Add customer</button>
-    <a class="btn ghost" id="viewArch" href="archived.html">View archived customers</a>
     <a class="back" href="app.html">Back to dashboard</a>
   </div>
 
@@ -90,7 +91,7 @@
       var box = $('list'); box.textContent = '';
       var active = all.filter(function (c) { return !c.archived; });
       var nArch = all.length - active.length;
-      $('viewArch').textContent = 'View archived customers' + (nArch ? ' (' + nArch + ')' : '');
+      $('viewArch').textContent = 'Archived' + (nArch ? ' (' + nArch + ')' : '');
       var shown = active.filter(function (c) {
         if (!q) return true;
         return (c.name || '').toLowerCase().indexOf(q) > -1 ||
