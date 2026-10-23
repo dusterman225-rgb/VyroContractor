@@ -7,6 +7,7 @@
 <title>Dashboard - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -20,14 +21,31 @@
           <small id="mProduct"></small>
           <small id="mWho"></small>
         </div>
-        <a class="mi" id="miFin" href="finances.html" style="display:none">Finances</a>
-        <a class="mi" href="assistant.html">Assistant</a>
-        <a class="mi" id="miDoc" href="documents.html" style="display:none">Documents</a>
-        <a class="mi" id="miPay" href="paysettings.html" style="display:none">Pay with Vyro</a>
-        <a class="mi" id="miMsg" href="messages.html">Messages</a>
-        <a class="mi" href="customers.html">Customers</a>
-        <a class="mi" href="team.html">Team</a>
-        <a class="mi" href="profile.html">Business profile</a>
+        <details>
+          <summary class="mg">Work <span class="badge" id="bMsg" style="display:none"></span></summary>
+          <a class="mi" href="leads.html">Leads</a>
+          <a class="mi" href="estimates.html">Estimates</a>
+          <a class="mi" href="jobs.html">Active jobs</a>
+          <a class="mi" href="customers.html">Customers</a>
+          <a class="mi" href="messages.html">Messages <span class="badge" id="bMsg2" style="display:none"></span></a>
+        </details>
+        <details>
+          <summary class="mg">Money</summary>
+          <a class="mi" href="invoices.html">Invoices</a>
+          <a class="mi" href="expenses.html">Expenses and bills</a>
+          <a class="mi" id="miFin" href="finances.html" style="display:none">Finances</a>
+          <a class="mi" id="miPay" href="paysettings.html" style="display:none">Pay with Vyro</a>
+        </details>
+        <details>
+          <summary class="mg">Tools</summary>
+          <a class="mi" id="miDoc" href="documents.html" style="display:none">Documents</a>
+          <a class="mi" href="assistant.html">Assistant</a>
+        </details>
+        <details>
+          <summary class="mg">Business</summary>
+          <a class="mi" href="profile.html">Business profile</a>
+          <a class="mi" href="team.html">Team</a>
+        </details>
         <button class="mi out" id="out" type="button">Sign out</button>
       </div>
     </div>
@@ -35,36 +53,21 @@
 
   <div class="tag" style="margin:22px 0 0">Dashboard</div>
 
+  <div class="qa">
+    <a class="btn" href="leads.html?new=1">New lead</a>
+    <a class="btn" href="estimate.html">New estimate</a>
+    <a class="btn" href="invoice.html">New invoice</a>
+  </div>
+
   <div class="card" id="acceptedBanner" style="display:none">
     <h2>Accepted online</h2>
     <p id="acceptedText"></p>
     <a class="btn" href="jobs.html">View active jobs</a>
   </div>
 
-  <div class="card">
+  <div class="card att" id="att">
     <h2>Needs your attention</h2>
-    <div class="row"><span>Unread customer messages</span><b id="nMsg">...</b></div>
-    <div class="row"><span>New leads</span><b id="nNew">...</b></div>
-    <div class="row"><span>Leads waiting 2+ days</span><b id="nStale">...</b></div>
-    <div class="row"><span>Follow-ups due</span><b id="nDue">...</b></div>
-    <div class="row"><span>Estimates awaiting reply</span><b id="nSent">...</b></div>
-    <div class="row"><span>Active jobs</span><b id="nJobs">...</b></div>
-    <div class="row"><span>Money owed to you</span><b id="nOwed">...</b></div>
-    <div class="row"><span>Overdue invoices</span><b id="nOverdue">...</b></div>
-    <div class="row"><span>Bills you need to pay</span><b id="nBills">...</b></div>
-  </div>
-
-  <div class="nav">
-    <a class="btn" href="leads.html">Leads</a>
-    <a class="btn" href="estimates.html">Estimates</a>
-    <a class="btn" href="jobs.html">Active jobs</a>
-    <a class="btn" href="invoices.html">Invoices</a>
-    <a class="btn" href="expenses.html" style="grid-column:1/-1">Expenses and bills</a>
-  </div>
-
-  <div class="card">
-    <h2>Coming next</h2>
-    <p>Contracts and documents for the customer portal.</p>
+    <div id="attBody"><div class="ok">Loading...</div></div>
   </div>
 
   <div class="note err" id="err"></div>
@@ -91,12 +94,12 @@
   $('out').addEventListener('click', async function () { await vyro.signOut(); location.href = 'login.html'; });
 
   vyro.start(async function (ctx) {
+    var canMoney = ctx.role === 'owner' || ctx.role === 'supervisor';
     $('mName').textContent = ctx.biz.name;
     $('mProduct').textContent = PRODUCT_NAMES[ctx.biz.product] || '';
-    $('mWho').textContent = ctx.role + ' · ' + ctx.user.email;
-    if (ctx.role === 'owner') $('miFin').style.display = 'block';
-    if (ctx.role === 'owner' || ctx.role === 'supervisor') $('miDoc').style.display = 'block';
-    if (ctx.role === 'owner') $('miPay').style.display = 'block';
+    $('mWho').textContent = ctx.role + ' \u00b7 ' + ctx.user.email;
+    if (ctx.role === 'owner') { $('miFin').style.display = 'block'; $('miPay').style.display = 'block'; }
+    if (canMoney) $('miDoc').style.display = 'block';
 
     // pull in estimates customers accepted through their email link
     try {
@@ -107,70 +110,90 @@
       }
     } catch (e) { /* best effort; needs the latest Firestore rules */ }
 
-    try {
-      var snap = await ctx.bizRef.collection('leads').get();
-      var today = vutil.todayStr(), now = Date.now(), nNew = 0, nStale = 0, nDue = 0;
-      snap.forEach(function (d) {
-        var l = d.data();
-        if (l.status === 'New') {
-          nNew++;
-          var t = l.createdAt && l.createdAt.toMillis ? l.createdAt.toMillis() : now;
-          if (now - t > 2 * 86400000) nStale++;
-        }
-        if (l.followUpOn && l.followUpOn <= today && l.status !== 'Won' && l.status !== 'Lost') nDue++;
+    var n = { newLeads: 0, staleLeads: 0, due: 0, sent: 0, jobs: 0, owed: 0, over: 0, bills: 0, billsOver: 0, unread: 0 }, failed = false;
+    var today = vutil.todayStr(), now = Date.now();
+
+    await Promise.all([
+      (async function () {
+        try {
+          var snap = await ctx.bizRef.collection('leads').get();
+          snap.forEach(function (d) {
+            var l = d.data();
+            if (l.status === 'New') {
+              n.newLeads++;
+              var t = l.createdAt && l.createdAt.toMillis ? l.createdAt.toMillis() : now;
+              if (now - t > 2 * 86400000) n.staleLeads++;
+            }
+            if (l.followUpOn && l.followUpOn <= today && l.status !== 'Won' && l.status !== 'Lost') n.due++;
+          });
+        } catch (e) { failed = true; }
+      })(),
+      (async function () { try { n.sent = (await ctx.bizRef.collection('estimates').where('status', '==', 'Sent').get()).size; } catch (e) { failed = true; } })(),
+      (async function () {
+        try {
+          (await ctx.bizRef.collection('jobs').get()).forEach(function (d) {
+            var s = d.data().status; if (s === 'Not Started' || s === 'In Progress' || s === 'On Hold') n.jobs++;
+          });
+        } catch (e) { failed = true; }
+      })(),
+      (async function () {
+        try {
+          (await ctx.bizRef.collection('invoices').get()).forEach(function (d) {
+            var i = d.data();
+            if (i.status === 'Sent' || i.status === 'Partially Paid') {
+              n.owed += (i.totalCents || 0) - (i.paidCents || 0);
+              if (i.dueDate && i.dueDate < today) n.over++;
+            }
+          });
+        } catch (e) { failed = true; }
+      })(),
+      (async function () {
+        if (!canMoney) return;
+        try {
+          (await ctx.bizRef.collection('expenses').where('status', '==', 'Unpaid').get()).forEach(function (d) {
+            var x = d.data(); n.bills += x.amountCents || 0; if (x.dueDate && x.dueDate < today) n.billsOver++;
+          });
+        } catch (e) { failed = true; }
+      })(),
+      (async function () {
+        try { (await vyro.db.collection('portals').where('bizId', '==', ctx.bizId).get()).forEach(function (d) { n.unread += d.data().unreadCount || 0; }); } catch (e) { /* no portals yet */ }
+      })()
+    ]);
+
+    if (n.unread) { ['bMsg', 'bMsg2'].forEach(function (id) { $(id).textContent = n.unread; $(id).style.display = 'inline-block'; }); }
+
+    // only show what needs attention
+    var groups = [
+      ['Money', [
+        n.owed > 0 && ['Money owed to you', vutil.fmt(n.owed), 'invoices.html', false],
+        n.over > 0 && ['Overdue invoices', n.over, 'invoices.html', true],
+        n.bills > 0 && ['Bills to pay', vutil.fmt(n.bills) + (n.billsOver ? ' (' + n.billsOver + ' overdue)' : ''), 'expenses.html', n.billsOver > 0]
+      ]],
+      ['Work', [
+        n.jobs > 0 && ['Active jobs', n.jobs, 'jobs.html', false],
+        n.sent > 0 && ['Estimates waiting for a reply', n.sent, 'estimates.html', false]
+      ]],
+      ['Leads', [
+        n.newLeads > 0 && ['New leads', n.newLeads + (n.staleLeads ? ' (' + n.staleLeads + ' waiting 2+ days)' : ''), 'leads.html', n.staleLeads > 0],
+        n.due > 0 && ['Follow-ups due', n.due, 'leads.html', true]
+      ]],
+      ['Messages', [
+        n.unread > 0 && ['Unread customer messages', n.unread, 'messages.html', true]
+      ]]
+    ];
+    var box = $('attBody'); box.textContent = ''; var any = false;
+    groups.forEach(function (g) {
+      var rows = g[1].filter(Boolean); if (!rows.length) return; any = true;
+      box.appendChild(vyro.el('h3', '', g[0]));
+      rows.forEach(function (r) {
+        var a = vyro.el('a', 'arow'); a.href = r[2];
+        a.appendChild(vyro.el('span', '', r[0]));
+        a.appendChild(vyro.el('b', r[3] ? 'late' : '', String(r[1])));
+        box.appendChild(a);
       });
-      $('nNew').textContent = nNew;
-      $('nStale').textContent = nStale; if (nStale) $('nStale').className = 'late';
-      $('nDue').textContent = nDue; if (nDue) $('nDue').className = 'late';
-    } catch (e) {
-      $('nNew').textContent = $('nStale').textContent = $('nDue').textContent = '-';
-      $('err').textContent = 'Could not load leads. Check the Firestore rules were published.';
-    }
-
-    try {
-      var ps = await vyro.db.collection('portals').where('bizId', '==', ctx.bizId).get(), unread = 0;
-      ps.forEach(function (d) { unread += d.data().unreadCount || 0; });
-      $('nMsg').textContent = unread; if (unread) { $('nMsg').className = 'late'; $('miMsg').textContent = 'Messages (' + unread + ')'; }
-    } catch (e) { $('nMsg').textContent = '-'; }
-
-    try {
-      var es = await ctx.bizRef.collection('estimates').where('status', '==', 'Sent').get();
-      $('nSent').textContent = es.size;
-    } catch (e) { $('nSent').textContent = '-'; }
-
-    try {
-      var js = await ctx.bizRef.collection('jobs').get(), act = 0;
-      js.forEach(function (d) {
-        var s = d.data().status;
-        if (s === 'Not Started' || s === 'In Progress' || s === 'On Hold') act++;
-      });
-      $('nJobs').textContent = act;
-    } catch (e) { $('nJobs').textContent = '-'; }
-
-    try {
-      var inv = await ctx.bizRef.collection('invoices').get();
-      var owed = 0, over = 0, tday = vutil.todayStr();
-      inv.forEach(function (d) {
-        var i = d.data();
-        if (i.status === 'Sent' || i.status === 'Partially Paid') {
-          owed += (i.totalCents || 0) - (i.paidCents || 0);
-          if (i.dueDate && i.dueDate < tday) over++;
-        }
-      });
-      $('nOwed').textContent = vutil.fmt(owed);
-      $('nOverdue').textContent = over; if (over) $('nOverdue').className = 'late';
-    } catch (e) { $('nOwed').textContent = '-'; $('nOverdue').textContent = '-'; }
-
-    try {
-      var bx = await ctx.bizRef.collection('expenses').where('status', '==', 'Unpaid').get();
-      var bills = 0, billsOver = 0, td = vutil.todayStr();
-      bx.forEach(function (d) {
-        var x = d.data(); bills += x.amountCents || 0;
-        if (x.dueDate && x.dueDate < td) billsOver++;
-      });
-      $('nBills').textContent = vutil.fmt(bills) + (billsOver ? ' (' + billsOver + ' overdue)' : '');
-      if (billsOver) $('nBills').className = 'late';
-    } catch (e) { $('nBills').textContent = '-'; }
+    });
+    if (!any) box.appendChild(vyro.el('div', 'ok', failed ? 'Some numbers could not load. Check the Firestore rules were published.' : 'You\'re all caught up.'));
+    else if (failed) $('err').textContent = 'Some numbers could not load. Check the Firestore rules were published.';
   });
 </script>
 </body>
