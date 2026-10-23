@@ -7,6 +7,7 @@
 <title>Pay with Vyro - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -15,10 +16,7 @@
     <div class="tag" id="pageTag">Pay with Vyro</div>
   </div>
 
-  <div class="card" id="testBanner" style="display:none;border-color:#d4af37">
-    <h2>TEST MODE</h2>
-    <p>This is on the test network. No real money moves.</p>
-  </div>
+  <div id="testBanner" style="display:none;margin:8px 0;padding:6px 12px;border:1px solid #d4af37;border-radius:999px;text-align:center;font-size:.78rem;color:#d4af37">TEST MODE: no real money</div>
 
   <div class="card">
     <h2 id="iTitle">Loading...</h2>
@@ -43,10 +41,15 @@
     <div id="qrBox" style="background:#fff;padding:6px;border-radius:10px;max-width:340px;margin:8px auto"></div>
     <div class="row"><span>They send</span><b id="qAmt"></b></div>
     <div class="row"><span>You receive (after 2% Vyro fee)</span><b id="qNet"></b></div>
-    <div class="note">In the Vyro app: tap Send, then scan this code. Keep this page open. Vyro checks the blockchain by itself and marks the invoice paid.</div>
-    <div class="note" id="qLink" style="word-break:break-all"></div>
+    <div class="note">Keep this page open. It marks the invoice paid by itself.</div>
     <button class="btn" id="bCheck" type="button">Check payment now</button>
-    <button class="btn ghost" id="bNew" type="button">Make a new code</button>
+    <details class="more">
+      <summary>More</summary>
+      <div class="in">
+        <button class="btn ghost" id="bNew" type="button">Make a new code</button>
+        <div class="note" id="qLink" style="word-break:break-all"></div>
+      </div>
+    </details>
     <div class="note" id="qMsg"></div>
   </div>
 
@@ -69,6 +72,7 @@
 <script src="js/chain-config.js"></script>
 <script src="js/chain.js"></script>
 <script src="js/util.js"></script>
+<script>window.VYRO_STAFF_ONLY = true;</script>
 <script src="js/auth.js"></script>
 <script>
   var $ = function (id) { return document.getElementById(id); };
@@ -176,5 +180,4 @@
   });
 </script>
 </body>
-      </html>
-    
+</html>
