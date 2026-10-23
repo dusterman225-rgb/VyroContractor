@@ -7,6 +7,7 @@
 <title>Estimate - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -18,15 +19,17 @@
   <div class="card" id="lockNote" style="display:none"><p id="lockText"></p></div>
 
   <form id="form" autocomplete="off">
-    <div class="card">
-      <h2>Customer</h2>
+    <details class="sec" id="secCust" open>
+      <summary>Customer <small id="custSum"></small></summary>
+      <div class="in">
       <label class="field"><span>Customer</span><select id="cust"><option value="">Choose a customer...</option></select></label>
       <label class="field" id="nameRow"><span>Name (no customer record yet)</span><input id="cname" type="text" maxlength="120"></label>
       <input id="cemail" type="hidden">
       <input id="cphone" type="hidden">
       <a class="link" id="viewCust" href="#" style="display:none">View customer page</a>
       <label class="field"><span>Job address</span><textarea id="caddr" rows="2" maxlength="300"></textarea></label>
-    </div>
+      </div>
+    </details>
 
     <div class="card">
       <h2>Estimate</h2>
@@ -52,11 +55,18 @@
       <div class="row"><span>Deposit due</span><b id="tDep">$0.00</b></div>
     </div>
 
-    <div class="card">
-      <h2>Terms and notes</h2>
-      <label class="field"><span>Terms (shown to customer)</span><textarea id="terms" rows="4" maxlength="2000"></textarea></label>
-      <label class="field"><span>Internal notes (not shown)</span><textarea id="internalNotes" rows="3" maxlength="1000"></textarea></label>
-    </div>
+    <details class="sec" id="secTerms" open>
+      <summary>Terms <small>shown to customer</small></summary>
+      <div class="in">
+        <label class="field"><span>Terms</span><textarea id="terms" rows="4" maxlength="2000"></textarea></label>
+      </div>
+    </details>
+    <details class="sec" id="secNotes">
+      <summary>Add notes <small>private</small></summary>
+      <div class="in">
+        <label class="field"><span>Internal notes (never shown to the customer)</span><textarea id="internalNotes" rows="3" maxlength="1000"></textarea></label>
+      </div>
+    </details>
 
     <div class="card">
       <button class="btn" id="bSend" type="button">Send</button>
@@ -73,15 +83,18 @@
     <div id="askModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.78);z-index:50;align-items:center;justify-content:center;padding:16px;overflow:auto">
       <div class="card" style="max-width:420px;width:100%;margin:auto">
         <h2>Was the email sent?</h2>
-        <p>Your mail app should have opened with the estimate ready. Press Send there, then come back here.</p>
-        <p style="color:#ffd27a"><b>Before you tap Yes:</b> open your mail app and confirm the email is in <b>Sent</b>, not stuck in the <b>Outbox</b>.</p>
+        <p>Press Send in your mail app, then check it shows in <b>Sent</b>, not Outbox.</p>
         <button class="btn" id="askYes" type="button">Yes, it was sent</button>
         <button class="btn ghost" id="askHand" type="button">I'm handing it over myself</button>
         <button class="btn ghost" id="askNo" type="button">No, not yet</button>
-        <div class="note">Mail app didn't open or won't send?</div>
-        <button class="btn ghost" id="askAgain" type="button">Open the email again</button>
-        <button class="btn ghost" id="askGmail" type="button">Open in Gmail (browser)</button>
-        <button class="btn ghost" id="askCopy" type="button">Copy the email text</button>
+        <details class="more">
+          <summary>Having trouble?</summary>
+          <div class="in">
+            <button class="btn ghost" id="askAgain" type="button">Open the email again</button>
+            <button class="btn ghost" id="askGmail" type="button">Open in Gmail (browser)</button>
+            <button class="btn ghost" id="askCopy" type="button">Copy the email text</button>
+          </div>
+        </details>
         <div class="note" id="askMsg"></div>
       </div>
     </div>
@@ -298,6 +311,7 @@
         totalCents: t.totalCents, terms: $('terms').value.trim(), internalNotes: $('internalNotes').value.trim(),
         status: st, updatedAt: vyro.stamp()
       };
+      if (newStatus === 'Voided') vyro.audit(ctx, 'estimate voided', (est && est.number) || '');
       var token = (est && est.publicToken) || (openSend ? vpublic.makeToken() : '');
       if (token) data.publicToken = token;
       if (newStatus && newStatus !== status) {
@@ -442,9 +456,28 @@
     $('bVoid').addEventListener('click', function () { if (confirm('Void this estimate?')) save('Voided'); });
     $('bDel').addEventListener('click', async function () {
       if (!confirm('Delete this estimate permanently?')) return;
-      try { await col.doc(est.id).delete(); location.href = 'estimates.html'; } catch (e) { say(vyro.friendly(e), 'err'); }
+      try { await col.doc(est.id).delete(); await vyro.audit(ctx, 'estimate deleted', est.number || est.id); location.href = 'estimates.html'; } catch (e) { say(vyro.friendly(e), 'err'); }
     });
   });
+</script>
+<script>
+// Fold Customer and Terms once they are filled in (existing invoices / estimate-based ones)
+(function () {
+  var tries = 0, t = setInterval(function () {
+    tries++;
+    var q = function (i) { return document.getElementById(i); };
+    var filled = q('cust') && (q('cust').value || (q('cname') && q('cname').value.trim()));
+    if (filled) {
+      var nm = q('cust').selectedOptions && q('cust').value ? q('cust').selectedOptions[0].text : q('cname').value;
+      q('custSum').textContent = nm;
+      q('secCust').open = false;
+      if (q('terms').value.trim()) q('secTerms').open = false;
+      if (q('internalNotes').value.trim()) q('secNotes').open = true;
+      clearInterval(t);
+    }
+    if (tries > 40) clearInterval(t);
+  }, 250);
+})();
 </script>
 </body>
 </html>
