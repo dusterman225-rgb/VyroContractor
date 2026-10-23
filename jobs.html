@@ -7,6 +7,7 @@
 <title>Jobs - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -15,12 +16,12 @@
     <div class="tag">Jobs</div>
   </div>
 
-  <div class="card totals">
-    <div class="row"><span>Active jobs</span><b id="sActive">-</b></div>
-    <div class="row"><span>Active contract value</span><b id="sValue">-</b></div>
-    <div class="row"><span>Collected so far</span><b id="sPaid">-</b></div>
-    <div class="row"><span>Still owed (sent invoices)</span><b id="sOwed">-</b></div>
+  <div class="strip">
+    <div><small>Active</small><b id="sActive">-</b></div>
+    <div><small>Collected</small><b id="sPaid">-</b></div>
+    <div><small>Owed</small><b id="sOwed">-</b></div>
   </div>
+  <span id="sValue" style="display:none"></span>
 
   <div class="tabs" id="tabs"></div>
   <div class="card" style="margin-top:0">
@@ -28,7 +29,6 @@
     <div id="list"></div>
     <div class="note" id="empty"></div>
   </div>
-  <a class="btn ghost" href="estimates.html">Back to estimates</a>
   <a class="back" href="app.html">Back to dashboard</a>
   <div class="note err" id="err"></div>
 </div>
@@ -118,7 +118,7 @@
       });
       if (added) await batch.commit();
 
-      var inv = await ctx.bizRef.collection('invoices').get();
+      var inv = (ctx.role === 'employee') ? { forEach: function () {} } : await ctx.bizRef.collection('invoices').get();
       inv.forEach(function (d) {
         var i = d.data();
         if (!i.estimateId || i.status === 'Voided') return;
