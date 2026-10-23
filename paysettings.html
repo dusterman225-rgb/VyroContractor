@@ -7,6 +7,7 @@
 <title>Pay with Vyro setup - Vyro Business</title>
 <link rel="icon" href="images/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/clean.css">
 </head>
 <body>
 <div class="wrap">
@@ -15,26 +16,23 @@
     <div class="tag">Pay with Vyro</div>
   </div>
 
-  <div class="card" id="testBanner" style="display:none;border-color:#d4af37">
-    <h2>TEST MODE</h2>
-    <p>Pay with Vyro is on the test network. Payments here use play money and have no real value.</p>
-  </div>
+  <div id="testBanner" style="display:none;margin:8px 0;padding:6px 12px;border:1px solid #d4af37;border-radius:999px;text-align:center;font-size:.78rem;color:#d4af37">TEST MODE: no real money</div>
 
   <div class="card">
     <h2>Get paid in crypto</h2>
-    <p>Customers pay from their Vyro app by scanning a QR code on your invoice. The money goes straight to your wallet. Vyro never holds it. Vyro's fee is 2% of each payment, taken out of the payment automatically.</p>
+    <p>Customers scan a QR on your invoice. Money goes straight to your wallet. Vyro's fee is 2%.</p>
     <label class="field"><span>Your wallet address (Solana)</span><input id="wallet" type="text" maxlength="60" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
-    <div class="note">Use a wallet you control. Payments sent to a wrong address cannot be reversed. After saving, check the first and last 4 characters match your wallet app.</div>
+    <div class="note">Payments to a wrong address can't be reversed. Double-check it.</div>
     <label class="check" style="display:flex;gap:10px;align-items:center;margin:10px 0"><input type="checkbox" id="cUsdc" style="width:auto"><span>Accept USDC (a stable dollar coin)</span></label>
-    <label class="check" style="display:flex;gap:10px;align-items:center;margin:10px 0"><input type="checkbox" id="cSol" style="width:auto"><span>Accept SOL (price moves; Vyro locks the amount when it makes the QR)</span></label>
+    <label class="check" style="display:flex;gap:10px;align-items:center;margin:10px 0"><input type="checkbox" id="cSol" style="width:auto"><span>Accept SOL</span></label>
     <button class="btn" id="save" type="button">Save</button>
     <div class="note" id="msg"></div>
   </div>
 
-  <div class="card">
-    <h2>How a payment works</h2>
-    <p>1. Open an invoice and tap Pay with Vyro. 2. Pick the coin and show the QR to your customer. 3. They open Vyro, tap Send, and scan it. 4. Vyro checks the blockchain and marks the invoice paid by itself. You never type these payments in.</p>
-  </div>
+  <details class="sec">
+    <summary>How a payment works</summary>
+    <div class="in"><p>Open an invoice, tap Pay with Vyro, pick the coin and show the QR. The customer scans it in the Vyro app. The invoice is marked paid automatically.</p></div>
+  </details>
   <a class="back" href="app.html">Back to dashboard</a>
   <div class="note err" id="err"></div>
 </div>
@@ -65,12 +63,11 @@
       if (!cs.length) { $('msg').textContent = 'Pick at least one coin.'; $('msg').className = 'note err'; return; }
       if (!confirm('Customers\' payments will go to:\n\n' + w + '\n\nIs this exactly your wallet address?')) return;
       this.disabled = true;
-      try { await ctx.bizRef.update({ payWallet: w, payCoins: cs }); $('msg').textContent = 'Saved.'; $('msg').className = 'note'; }
+      try { await ctx.bizRef.update({ payWallet: w, payCoins: cs }); await vyro.audit(ctx, 'payment wallet changed', w + ' / ' + cs.join(',')); $('msg').textContent = 'Saved.'; $('msg').className = 'note'; }
       catch (e) { $('msg').textContent = vyro.friendly(e); $('msg').className = 'note err'; }
       this.disabled = false;
     });
   });
 </script>
 </body>
-  </html>
-                                                                                               
+</html>
