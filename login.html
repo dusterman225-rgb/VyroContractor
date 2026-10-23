@@ -24,7 +24,8 @@
     <button class="link" id="forgot" type="button">Forgot your password?</button>
     <div class="note" id="msg"></div>
   </form>
-  <a class="back" href="choose.html">New here? Create an account</a>
+  <a class="back" href="portal-login.html">Customer? Open your project portal</a>
+  <a class="back" href="choose.html">New contractor? Create an account</a>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
@@ -41,7 +42,11 @@
     var em = $('email').value.trim(), pw = $('pw').value;
     if (!em || !pw) { say('Enter your email and password.', 'err'); return; }
     $('go').disabled = true; say('Signing in...');
-    try { await vyro.signIn(em, pw); location.href = 'app.html'; }
+    try {
+      var cred = await vyro.signIn(em, pw);
+      var ud = await vyro.db.collection('users').doc(cred.user.uid).get();
+      location.href = (ud.exists && ud.data().bizId) ? 'app.html' : 'portal.html';
+    }
     catch (err) { say(vyro.friendly(err), 'err'); $('go').disabled = false; }
   });
   $('forgot').addEventListener('click', async function () {
