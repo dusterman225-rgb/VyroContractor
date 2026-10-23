@@ -16,6 +16,13 @@
     <div class="tag">Business profile</div>
   </div>
 
+  <div class="card" id="meCard">
+    <h2>Your name</h2>
+    <label class="field"><span>Name shown as the contractor on contracts</span><input id="myName" type="text" maxlength="80" autocomplete="name" placeholder="Jane Smith"></label>
+    <button class="btn ghost" id="saveMe" type="button">Save my name</button>
+    <div class="note" id="meMsg"></div>
+  </div>
+
   <form class="card" id="f">
     <h2>Details</h2>
     <label class="field"><span>Business name</span><input id="name" type="text" required></label>
@@ -43,6 +50,15 @@
 
   vyro.start(function (ctx) {
     var isOwner = ctx.role === 'owner';
+    document.getElementById('myName').value = (ctx.me && ctx.me.name) || '';
+    document.getElementById('saveMe').addEventListener('click', async function () {
+      var n = document.getElementById('myName').value.trim(), mm = document.getElementById('meMsg');
+      if (!n) { mm.textContent = 'Type your name.'; mm.className = 'note err'; return; }
+      this.disabled = true; mm.className = 'note'; mm.textContent = 'Saving...';
+      try { await ctx.bizRef.collection('members').doc(ctx.user.uid).update({ name: n }); ctx.me.name = n; mm.textContent = 'Saved.'; mm.className = 'note ok'; }
+      catch (e) { mm.textContent = vyro.friendly(e); mm.className = 'note err'; }
+      this.disabled = false;
+    });
     Object.keys(fields).forEach(function (k) {
       var input = document.getElementById(fields[k]);
       input.value = (k === 'license' ? (ctx.biz.license || ctx.biz.licenseNumber) : ctx.biz[k]) || '';
