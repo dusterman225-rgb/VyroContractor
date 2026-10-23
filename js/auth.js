@@ -120,6 +120,14 @@
     requireAuth(async function (user) {
       try {
         var ctx = await loadContext(user);
+        if (window.VYRO_STAFF_ONLY && ctx.role === 'employee') {
+          Array.prototype.forEach.call(document.querySelectorAll('.wrap > *'), function (n) {
+            if (!n.classList.contains('brand') && !n.classList.contains('back') && n.id !== 'err') n.style.display = 'none';
+          });
+          var ee = document.getElementById('err');
+          if (ee) ee.textContent = 'Only the owner or a supervisor can use this page.';
+          return;
+        }
         await cb(ctx);
       } catch (err) {
         var e = document.getElementById('err');
@@ -128,7 +136,17 @@
     });
   }
 
-  window.vyro = { auth: auth, db: db, stamp: stamp, friendly: friendly, el: el,
+  // Change log (best effort). Owners can read it in the rules; nobody can edit or delete entries.
+  function audit(ctx, action, detail) {
+    try {
+      return ctx.bizRef.collection('audit').add({
+        action: String(action).slice(0, 60), detail: String(detail || '').slice(0, 300),
+        by: ctx.user.uid, byEmail: ctx.user.email || '', role: ctx.role, at: stamp()
+      }).catch(function () { /* never block the real action */ });
+    } catch (e) { return Promise.resolve(); }
+  }
+
+  window.vyro = { audit: audit, auth: auth, db: db, stamp: stamp, friendly: friendly, el: el,
     signUp: signUp, addMember: addMember, sendLoginEmail: sendLoginEmail,
     signIn: signIn, resetPassword: resetPassword, signOut: signOut,
     requireAuth: requireAuth, redirectIfSignedIn: redirectIfSignedIn,
