@@ -1,1 +1,67 @@
 
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#05070A">
+<title>Home - Vyro Business</title>
+<link rel="icon" href="../images/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/clean.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <a href="./"><img class="mark-small" src="../images/logo.svg" alt="Back to home"></a>
+    <div class="tag">Restaurant</div>
+  </div>
+
+  <div class="strip">
+    <div><small>Open orders</small><b id="sOpen">-</b></div>
+    <div><small>Orders today</small><b id="sCount">-</b></div>
+    <div><small>Sales today</small><b id="sSales">-</b></div>
+  </div>
+  <div class="qa">
+    <a class="btn" href="pos.html">Point of sale</a>
+    <a class="btn" href="kitchen.html">Kitchen</a>
+    <a class="btn" href="orders.html">Orders</a>
+    <a class="btn" id="menuLink" href="menu.html">Menu and recipes</a>
+  </div>
+  <div class="card">
+    <a class="btn ghost" href="theme.html" id="themeLink">Brand colours</a>
+    <a class="btn ghost" href="../team.html" id="teamLink">Team</a>
+    <a class="btn ghost" href="../profile.html" id="profLink">Business profile</a>
+    <a class="btn ghost" href="../assistant.html">Assistant</a>
+    <button class="btn ghost" id="out" type="button">Sign out</button>
+  </div>
+  <div class="note err" id="err"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/util.js"></script>
+<script src="../js/auth.js"></script>
+<script src="js/theme.js"></script>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  function onlyRestaurant(ctx) { if (ctx.biz.product && ctx.biz.product !== 'restaurant') { location.replace('../app.html'); return false; } vtheme.load(ctx); return true; }
+
+  $('out').addEventListener('click', async function () { await vyro.signOut(); location.href = '../login.html'; });
+  vyro.start(async function (ctx) {
+    if (!onlyRestaurant(ctx)) return;
+    var staff = ctx.role === 'owner' || ctx.role === 'supervisor';
+    document.querySelector('.tag').textContent = ctx.biz.name || 'Restaurant';
+    if (!staff) { $('menuLink').style.display = 'none'; $('teamLink').style.display = 'none'; $('themeLink').style.display = 'none'; $('profLink').style.display = 'none'; document.querySelector('.strip div:last-child').style.display = 'none'; document.querySelector('.strip').style.gridTemplateColumns = 'repeat(2,1fr)'; }
+    try {
+      var s = await ctx.bizRef.collection('orders').where('dateKey', '==', vutil.todayStr()).get();
+      var open = 0, n = 0, sales = 0;
+      s.forEach(function (d) { var o = d.data(); if (o.status === 'Voided') return; n++; if (o.status === 'Open') open++; if (o.status === 'Paid') sales += o.totalCents || 0; });
+      $('sOpen').textContent = open; $('sCount').textContent = n; $('sSales').textContent = vutil.fmt(sales);
+    } catch (e) { $('err').textContent = vyro.friendly(e); }
+  });
+</script>
+</body>
+  </html>
