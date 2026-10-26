@@ -54,7 +54,8 @@
     </div>
   </div>
 
-  <div class="tag" style="margin:22px 0 0">Dashboard</div>
+  <div class="tag" id="bizTag" style="margin:22px 0 0">Dashboard</div>
+  <div id="wpBox"></div>
 
   <div class="qa">
     <a class="btn" href="leads.html?new=1">New lead</a>
@@ -104,8 +105,11 @@
   $('out').addEventListener('click', async function () { await vyro.signOut(); location.href = 'login.html'; });
 
   vyro.start(async function (ctx) {
+    if (ctx.biz.product === 'restaurant') { location.replace('https://vyro-restaraunt.dusterman225.workers.dev/'); return; }
     var canMoney = ctx.role === 'owner' || ctx.role === 'supervisor';
     $('mName').textContent = ctx.biz.name;
+    if (ctx.biz.name) $('bizTag').textContent = ctx.biz.name;
+    if (vyro.mountSwitcher) vyro.mountSwitcher(ctx, $('wpBox'));
     $('mProduct').textContent = PRODUCT_NAMES[ctx.biz.product] || '';
     $('mWho').textContent = ctx.role + ' \u00b7 ' + ctx.user.email;
     if (ctx.role === 'owner') { $('miFin').style.display = 'block'; $('miPay').style.display = 'block'; }
